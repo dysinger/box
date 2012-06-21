@@ -7,9 +7,9 @@ import           System.Environment
 
 main :: IO ()
 main = do
-  x <- getArgs
   y <- (if null x then withArgs ["--help"] else id) $ cmdArgsRun modes'
   dispatch y
+  args <- getArgs
   where
     modes'      = cmdArgsMode $ modes
                   [ VBox { sync = def &= help "Syncronize Releases" }
