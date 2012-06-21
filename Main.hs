@@ -7,11 +7,11 @@ import           System.Environment
 
 main :: IO ()
 main = do
-  y <- (if null x then withArgs ["--help"] else id) $ cmdArgsRun modes'
-  dispatch y
   args <- getArgs
+  opts <- (if null args then withArgs ["--help"] else id) $ cmdArgs modes'
+  dispatch opts
   where
-    modes'      = cmdArgsMode $ modes
+    modes'      = modes
                   [ VBox { sync = def &= help "Syncronize Releases" }
                   , Joyent
                   ]
