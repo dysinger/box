@@ -18,6 +18,16 @@ import           HSH
 import           Network.HTTP.Conduit    hiding (def, path)
 import           System.Directory
 
+main :: IO ()
+main = do
+  p <- properties
+  i <- release
+  let s = SmartOS { smartos_name  = "smartos"
+                  , smartos_iso   = i
+                  , smartos_props = p }
+  downloadISO s
+  createOrUpdate s
+
 dispatch :: Command -> IO ()
 dispatch vbox@VBox{..} = do
   putStrLn $ show sync
