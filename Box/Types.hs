@@ -2,14 +2,20 @@
 
 module Box.Types where
 
+import Data.Data
 import Data.Map
-import System.Console.CmdArgs
 import System.FilePath.Posix
 
 -----------------------------------------------------------------------------
 
-data Command = VBox { sync :: Bool }
-             | Joyent
+data Command = Joyent
+             | LaunchJoyent
+             | DestroyJoyent
+             | VirtualBox
+             | SmartBox
+             | CreateSmartBox
+             | UpdateSmartBox
+             | DestroySmartBox
              deriving (Data, Typeable, Show, Eq)
 
 -----------------------------------------------------------------------------
@@ -21,8 +27,8 @@ class VM a where
   isoMd5    :: a -> String
   isoPath   :: a -> FilePath
   isoUrl    :: a -> String
-  path      :: a -> FilePath
-  path'     :: a -> FilePath -> FilePath
+  home      :: a -> FilePath
+  file      :: a -> FilePath -> FilePath
 
 -----------------------------------------------------------------------------
 
@@ -38,16 +44,16 @@ data ISO = ISO { iso_path :: FilePath
 
 instance VM SmartOS where
   vmName       = smartos_name
-  diskPath s   = path' s $ smartos_name s ++ ".vdi"
+  diskPath s   = file s $ smartos_name s ++ ".vdi"
   interface _s = "wlan0"
   isoMd5       = iso_md5 . smartos_iso
-  isoPath s    = (path' s . iso_path . smartos_iso) s
+  isoPath s    = (file s . iso_path . smartos_iso) s
   isoUrl       = url . iso_path . smartos_iso
-  path s       =
+  home s       =
     combine
     (findWithDefault "~/VirtualBox VMs" "Default machine folder" $ smartos_props s)
     $ smartos_name s
-  path' s      = combine (path s)
+  file s       = combine (home s)
 
 url :: String -> String
 url = (++) "https://download.joyent.com/pub/iso/"
