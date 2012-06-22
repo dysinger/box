@@ -2,7 +2,7 @@ name:                box
 version:             0.1.0.0
 synopsis:            Box Management
 homepage:            http://dysinger.net
-license:             MIT
+license:             OtherLicense
 author:              Tim Dysinger
 maintainer:          tim@dysinger.net
 category:            System
@@ -13,18 +13,18 @@ executable box
   main-is:           Main.hs
   ghc-options:       -O2 -Wall -rtsopts -static -threaded
   build-depends:     base == 4.5.1.0
-                   , HSH
                    , aeson
                    , base16-bytestring
                    , bytestring
                    , cereal
+                   , cmdargs
                    , conduit
                    , containers
-                   , cmdargs
                    , crypto-conduit
                    , directory
                    , filepath
                    , http-conduit
                    , pureMD5
+                   , shelly
                    , text
                    , transformers
