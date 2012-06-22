@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8 as DBC
 import           Data.Char
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
+import           Prelude               hiding (FilePath)
 import           Shelly
 
 default (DTL.Text)
@@ -91,7 +92,7 @@ updateNetwork s = modifyvm "smartos"
 -----------------------------------------------------------------------------
 
 virtualbox :: Bool -> [DTL.Text] -> ShIO ()
-virtualbox _headless@True = run_ "VBoxHeadless"
+virtualbox _headless@True  = run_ "VBoxHeadless"
 virtualbox _headless@False = run_ "VirtualBox"
 
 storagectl :: DTL.Text -> [DTL.Text] -> ShIO ()
@@ -118,9 +119,9 @@ vBoxManage_ :: [DTL.Text] -> ShIO ()
 vBoxManage_ = run_ "VBoxManage"
 
 vBoxManageCmd_ :: DTL.Text -> [DTL.Text] -> ShIO ()
-vBoxManageCmd_ cmd args = vBoxManage_ (cmd:args)
+vBoxManageCmd_ command args = vBoxManage_ (command:args)
 
 vBoxManageVmCmd_ :: DTL.Text -> DTL.Text -> [DTL.Text] -> ShIO ()
-vBoxManageVmCmd_ cmd vm args = vBoxManage_ (cmd:vm:args)
+vBoxManageVmCmd_ command vmName args = vBoxManage_ (command:vmName:args)
 
 -----------------------------------------------------------------------------
