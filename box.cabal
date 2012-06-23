@@ -11,11 +11,9 @@ cabal-version:       >= 1.8
 
 executable box
   main-is:           Main.hs
-  ghc-options:       -O2 -Wall
-                     -rtsopts
-                     -static -threaded
-                     -fno-warn-type-defaults
-                     -fno-warn-unused-do-bind
+  ghc-options:       -O2
+                     -Wall -fno-warn-type-defaults -fno-warn-unused-do-bind
+                     -rtsopts -threaded -static
   extensions:        DeriveDataTypeable
                      ExtendedDefaultRules
                      OverloadedStrings
