@@ -1,8 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-
 module Box.Provider.Joyent where
 
-import           Box.Types
 import           System.Console.CmdArgs.Explicit hiding (mode)
 import qualified System.Console.CmdArgs.Explicit as SCCE
 

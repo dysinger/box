@@ -1,12 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
-
 module Box.Provider.VirtualBox where
 
-import           Box.Types
 import qualified Data.ByteString.Char8 as DBC
-import           Data.Char
+import           Data.Char             (isSpace)
+import           Data.Data
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
 import           Prelude               hiding (FilePath)
@@ -16,9 +12,28 @@ default (DTL.Text)
 
 -----------------------------------------------------------------------------
 
+data VBoxVM = VBoxVM { vmIdent :: DTL.Text }
+            deriving (Data, Typeable, Eq)
+
+instance Show VBoxVM where
+  show = show . vmIdent
+
+data VBoxManageCmd = CreateHD
+                   | CreateIDE
+                   | CreateVM
+                   | List
+                   deriving (Data, Show, Typeable, Eq)
+
+data VBoxManageVmCmd = ModifyVM
+                     | ShowInfo
+                     | StorageAttach
+                     deriving (Data, Show, Typeable, Eq)
+
+-----------------------------------------------------------------------------
+
 properties :: ShIO (Map String String)
 properties = do
-  p <- run "VBoxManage" [ "list", "systemproperties" ]
+  p <- manage List [ "systemproperties" ]
   return $ fromList $ map props $ lines $ DTL.unpack p
   where props     = tuple . map clean . split . pack
         tuple     = (\(k:v:_) -> (k, v))
@@ -31,97 +46,36 @@ properties = do
 
 -----------------------------------------------------------------------------
 
--- TODO move these smartos specific functions to SmartBox
+vbox :: Bool -> [DTL.Text] -> ShIO ()
+vbox _headless@True  = run_ "VBoxHeadless"
+vbox _headless@False = run_ "VirtualBox"
 
-createVm :: VM a => a -> ShIO ()
-createVm s  = createvm
-              [ "--name", DTL.pack (vmName s)
-              , "--ostype", "OpenSolaris_64"
-              , "--register"
-              ]
+manage :: VBoxManageCmd -> [DTL.Text] -> ShIO DTL.Text
+manage vboxCmd args = manage' ((toLower vboxCmd):args)
 
-createIde :: ShIO ()
-createIde = storagectl "smartos"
-            [ "--add" , "ide"
-            , "--name", "'IDE Controller'"
-            ]
+manage_ :: VBoxManageCmd -> [DTL.Text] -> ShIO ()
+manage_ vboxCmd args = manage_' ((toLower vboxCmd):args)
 
-createDisk :: VM a => a -> ShIO ()
-createDisk s = createhd
-               [ "--filename", (DTL.pack $ "'" ++ diskPath s ++ "'")
-               , "--size", "40960"
-               ]
+manageVM :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO DTL.Text
+manageVM vm vboxCmd args = manage' ((toLower vboxCmd):(toText vm):args)
 
-attachISO :: VM a => a -> ShIO ()
-attachISO s = storageattach "smartos"
-              [ "--device", "0"
-              , "--medium ", DTL.pack $ "'" ++ (isoPath s) ++ "'"
-              , "--port", "1"
-              , "--storagectl", "'IDE Controller'"
-              , "--type", "dvddrive"
-              ]
+manageVM_ :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
+manageVM_ vm vboxCmd args = manage_' ((toLower vboxCmd):(toText vm):args)
 
-attachDisk :: VM a => a -> ShIO ()
-attachDisk s = storageattach "smartos"
-               [ "--device", "0"
-               , "--medium", DTL.pack $ "'" ++ (diskPath s) ++ "'"
-               , "--port", "0"
-               , "--storagectl" , "'IDE Controller'"
-               , "--type", "hdd"
-               ]
+-----------------------------------------------------------------------------
+-- Internal
+-----------------------------------------------------------------------------
 
-updateCpuMem :: ShIO ()
-updateCpuMem = modifyvm "smartos"
-               [ "--cpus", "2"
-               , "--memory", "4096"
-               ]
+manage' :: [DTL.Text] -> ShIO DTL.Text
+manage' = run "VBoxManage"
 
-updateBootOrder :: ShIO ()
-updateBootOrder = modifyvm "smartos"
-                  [ "--boot1", "dvd"
-                  , "--boot2", "disk"
-                  , "--boot3", "none"
-                  ]
-
-updateNetwork :: VM a => a -> ShIO ()
-updateNetwork s = modifyvm "smartos"
-                  [ "--bridgeadapter1", DTL.pack (interface s)
-                  , "--nic1", "bridged"
-                  ]
+manage_' :: [DTL.Text] -> ShIO ()
+manage_' = run_ "VBoxManage"
 
 -----------------------------------------------------------------------------
 
-virtualbox :: Bool -> [DTL.Text] -> ShIO ()
-virtualbox _headless@True  = run_ "VBoxHeadless"
-virtualbox _headless@False = run_ "VirtualBox"
+toText :: forall a. Show a => a -> DTL.Text
+toText = DTL.pack . show
 
-storagectl :: DTL.Text -> [DTL.Text] -> ShIO ()
-storagectl = vBoxManageVmCmd_ "storagectl"
-
-storageattach :: DTL.Text -> [DTL.Text] -> ShIO ()
-storageattach = vBoxManageVmCmd_ "storageattach"
-
-createhd :: [DTL.Text] -> ShIO ()
-createhd = vBoxManageCmd_ "createhd"
-
-createvm :: [DTL.Text] -> ShIO ()
-createvm = vBoxManageCmd_ "createvm"
-
-modifyvm :: DTL.Text -> [DTL.Text] -> ShIO ()
-modifyvm = vBoxManageVmCmd_ "modifyvm"
-
------------------------------------------------------------------------------
-
-vBoxManage :: [DTL.Text] -> ShIO DTL.Text
-vBoxManage = run "VBoxManage"
-
-vBoxManage_ :: [DTL.Text] -> ShIO ()
-vBoxManage_ = run_ "VBoxManage"
-
-vBoxManageCmd_ :: DTL.Text -> [DTL.Text] -> ShIO ()
-vBoxManageCmd_ command args = vBoxManage_ (command:args)
-
-vBoxManageVmCmd_ :: DTL.Text -> DTL.Text -> [DTL.Text] -> ShIO ()
-vBoxManageVmCmd_ command vmName args = vBoxManage_ (command:vmName:args)
-
------------------------------------------------------------------------------
+toLower :: forall a. Show a => a -> DTL.Text
+toLower = DTL.toLower . toText
