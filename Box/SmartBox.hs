@@ -1,6 +1,6 @@
 module Box.SmartBox where
 
-import           Box.Provider.VirtualBox
+import           Box.VirtualBox
 import           Crypto.Conduit
 import qualified Data.ByteString                 as DB
 import qualified Data.ByteString.Base16          as DBB

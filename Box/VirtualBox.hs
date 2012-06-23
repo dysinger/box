@@ -1,4 +1,13 @@
-module Box.Provider.VirtualBox where
+module Box.VirtualBox
+       ( VBoxManageCmd(..)
+       , VBoxManageVmCmd(..)
+       , VBoxVM(..)
+       , manage
+       , manage_
+       , manageVM
+       , manageVM_
+       , properties
+       ) where
 
 import qualified Data.ByteString.Char8 as DBC
 import           Data.Char             (isSpace)

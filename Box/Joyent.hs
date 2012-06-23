@@ -1,4 +1,4 @@
-module Box.Provider.Joyent where
+module Box.Joyent where
 
 import           System.Console.CmdArgs.Explicit hiding (mode)
 import qualified System.Console.CmdArgs.Explicit as SCCE

@@ -1,4 +1,4 @@
-import qualified Box.Provider.Joyent             as Joyent
+import qualified Box.Joyent                      as Joyent
 import qualified Box.SmartBox                    as SmartBox
 import           Data.Data
 import           System.Console.CmdArgs.Explicit
