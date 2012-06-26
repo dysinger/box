@@ -1,179 +1,115 @@
-module Box.SmartBox where
+module Box.SmartBox
+       ( mode
+       , main
+       ) where
 
+import           Box.SmartOS
 import           Box.VirtualBox
-import           Crypto.Conduit
-import qualified Data.ByteString                 as DB
-import qualified Data.ByteString.Base16          as DBB
-import qualified Data.ByteString.Char8           as DBC
-import qualified Data.ByteString.Lazy            as DBL
-import           Data.Conduit
-import           Data.Conduit.Binary             hiding (dropWhile, lines)
-import           Data.Digest.Pure.MD5
-import           Data.Map                        (Map, findWithDefault)
-import qualified Data.Serialize                  as DS
+import           Control.Exception               (SomeException)
+import           Data.Data
+import           Data.Map                        (findWithDefault)
 import qualified Data.Text.Lazy                  as DTL
-import           Network.HTTP.Conduit            hiding (def, path)
 import           Shelly                          hiding (FilePath)
 import qualified System.Console.CmdArgs.Explicit as SCCE
 import           System.Console.CmdArgs.Explicit hiding (mode)
 import           System.Directory
 import           System.FilePath.Posix
 
------------------------------------------------------------------------------
-
-class VM a where
-  vmName    :: a -> String
-  diskPath  :: a -> FilePath
-  interface :: a -> String
-  isoMd5    :: a -> String
-  isoPath   :: a -> FilePath
-  isoUrl    :: a -> String
-  home      :: a -> FilePath
-  file      :: a -> FilePath -> FilePath
+default (DTL.Text)
 
 -----------------------------------------------------------------------------
 
-data SmartOS = SmartOS { smartos_name  :: String
-                       , smartos_iso   :: ISO
-                       , smartos_props :: Map String String
-                       }
-             deriving Show
-
-data ISO = ISO { iso_path :: FilePath
-               , iso_md5  :: String }
-         deriving Show
-
-instance VM SmartOS where
-  vmName       = smartos_name
-  diskPath s   = file s $ smartos_name s ++ ".vdi"
-  interface _s = "wlan0"
-  isoMd5       = iso_md5 . smartos_iso
-  isoPath s    = (file s . iso_path . smartos_iso) s
-  isoUrl       = url . iso_path . smartos_iso
-  home s       =
-    combine
-    (findWithDefault "~/VirtualBox VMs" "Default machine folder" $ smartos_props s)
-    $ smartos_name s
-  file s       = combine (home s)
-
-url :: String -> String
-url = (++) "https://download.joyent.com/pub/iso/"
-
------------------------------------------------------------------------------
-
--- TODO add some subcommands (create, update, delete) with their own flags
--- TODO get a nice looking help working
+-- TODO add some cmdargs subcommands (create, update, delete) with
+-- their own flags
 
 mode :: Mode [(String,String)]
-mode = modes "smartos" [] "SmartOS Management" [ createMode
-                                               , deleteMode ]
+mode = modes "smartos" [] "SmartOS Management" [ createMode ]
 
 createMode :: Mode [(String,String)]
 createMode = SCCE.mode "create" [] "create a smartos instance"
              (flagArg (upd "file") "FILE") []
   where upd msg x v = Right $ (msg,x):v
 
-deleteMode :: Mode [(String,String)]
-deleteMode = SCCE.mode "delete" [] "delete a smartos instance"
-             (flagArg (upd "file") "FILE") []
-  where upd msg x v = Right $ (msg,x):v
+-----------------------------------------------------------------------------
+
+data SmartBox = SmartBox { sbVm         :: VBoxVM
+                         , sbVmDirPath  :: FilePath
+                         , sbVmDiskPath :: FilePath
+                         , sbIsoPath    :: FilePath
+                         , sbPlatform   :: SmartOS
+                         }
+              deriving (Data, Show, Typeable, Eq)
 
 -----------------------------------------------------------------------------
 
-dispatch :: String -> ShIO ()
-dispatch _ = do
-  props <- properties
-  iso <- liftIO platformVersion
-  let release = SmartOS { smartos_name  = "smartos"
-                        , smartos_iso   = iso
-                        , smartos_props = props }
-  liftIO $ downloadPlatform release
-  createOrUpdate release (VBoxVM (DTL.pack $ vmName release))
+main :: IO ()
+main = do
+  home     <- getHomeDirectory
+  platform <- soPlatform
+  shelly $ do
+    properties <- vbSysProps
+    let vm     = VBoxVM "smartbox"
+        folder = findWithDefault "vm" "Default machine folder" $ properties
+        dir    = combine folder . DTL.unpack . ident           $ vm
+        disk   = flip combine "zones.vdi"                      $ dir
+        isoDir = soIsoDirPath home
+        iso    = soIsoPath platform isoDir
+    liftIO $ soDownload platform isoDir
+    let sb = SmartBox { sbVm         = vm
+                      , sbVmDirPath  = dir
+                      , sbVmDiskPath = disk
+                      , sbIsoPath  = iso
+                      , sbPlatform = platform
+                      }
+    liftIO $ putStrLn $ show sb
+    createOrUpdate sb
 
------------------------------------------------------------------------------
+createOrUpdate :: SmartBox -> ShIO ()
+createOrUpdate sb@SmartBox{..} =
+  do vbManageVM_ sbVm ShowVMInfo []
+     update sb
+  `catch_sh`
+  (\(_e :: SomeException) ->
+    create sb)
 
-platformVersion :: IO ISO
-platformVersion = do
-  bs <- simpleHttp $ url "md5sums.txt"
-  let iso    = filter (DBC.isInfixOf $ DBC.pack "iso")
-      string = DBC.unpack
-      words' = DBC.words
-      strict = DB.concat . DBL.toChunks
-      lines' = DBC.lines
-      latest = map string . words' . last . iso . lines' . strict $ bs
-  return $ ISO { iso_md5 = latest !! 0, iso_path = latest !! 1 }
-
-downloadPlatform :: SmartOS -> IO ()
-downloadPlatform s = do
-  createDirectoryIfMissing True $ home s
-  exists <- doesFileExist $ isoPath s
-  if exists then checksum else download
-  where
-    checksum = do
-      hash <- runResourceT $ sourceFile (isoPath s) $$ sinkHash
-      let checksum' = DBC.unpack $ DBB.encode $ DS.encode (hash :: MD5Digest)
-      if checksum' /= (isoMd5 s) then download else return ()
-    download = do
-      request <- parseUrl (isoUrl s)
-      withManager $ \manager -> do
-        Response _ _ _ bsrc <- http request manager
-        bsrc $$ sinkFile $ isoPath s
-      downloadPlatform s
-
------------------------------------------------------------------------------
-
-createOrUpdate :: SmartOS -> VBoxVM -> ShIO ()
-createOrUpdate release vm = do
-  manageVM vm ShowInfo []
-  errs <- lastStderr
-  let manager = manageVM_ vm
-    in if errs == ""
-       then create manager release
-       else update manager release
-
-create :: (VBoxManageVmCmd -> [DTL.Text] -> ShIO ()) -> SmartOS -> ShIO ()
-create vmMgr release = do
-  manage_ CreateVM
-    [ "--name", DTL.pack (vmName release)
+create :: SmartBox -> ShIO ()
+create SmartBox{..} = do
+  vbManage_ CreateVM
+    [ "--name", ident sbVm
     , "--ostype", "OpenSolaris_64"
     , "--register"
     ]
-  manage_ CreateIDE
-    [ "--add" , "ide"
-    , "--name", "'IDE Controller'"
-    ]
-  manage_ CreateHD
-    [ "--filename", (DTL.pack $ "'" ++ diskPath release ++ "'")
-    , "--size", "40960"
-    ]
-  update vmMgr release
-
-update :: (VBoxManageVmCmd -> [DTL.Text] -> ShIO ()) -> SmartOS -> ShIO ()
-update vmMgr release = do
-  vmMgr StorageAttach
+  v ModifyVM [ "--cpus", "2", "--memory", "4096" ]
+  v StorageCtl [ "--add" , "ide", "--name", "IDE Controller" ]
+  vbManage_ CreateHD [ "--filename", DTL.pack sbVmDiskPath, "--size", "40960" ]
+  v StorageAttach
     [ "--device", "0"
-    , "--medium ", DTL.pack $ "'" ++ (isoPath release) ++ "'"
-    , "--port", "1"
-    , "--storagectl", "'IDE Controller'"
-    , "--type", "dvddrive"
-    ]
-  vmMgr StorageAttach
-    [ "--device", "0"
-    , "--medium", DTL.pack $ "'" ++ (diskPath release) ++ "'"
+    , "--medium", DTL.pack sbVmDiskPath
     , "--port", "0"
-    , "--storagectl" , "'IDE Controller'"
+    , "--storagectl" , "IDE Controller"
     , "--type", "hdd"
     ]
-  vmMgr ModifyVM
-    [ "--cpus", "2"
-    , "--memory", "4096"
+  v StorageAttach
+    [ "--device", "0"
+    , "--medium", DTL.pack sbIsoPath
+    , "--port", "1"
+    , "--storagectl", "IDE Controller"
+    , "--type", "dvddrive"
     ]
-  vmMgr ModifyVM
-    [ "--boot1", "dvd"
-    , "--boot2", "disk"
-    , "--boot3", "none"
+  v ModifyVM [ "--boot1", "dvd", "--boot2", "disk", "--boot3", "none" ]
+  v ModifyVM [ "--natpf1", "SSH,tcp,,2222,,22" ]
+  v ModifyVM [ "--nic2", "bridged", "--bridgeadapter2", DTL.pack "wlan0" ]
+  v ModifyVM [ "--nic3", "bridged", "--bridgeadapter3", DTL.pack "wlan0" ]
+  v ModifyVM [ "--nic4", "bridged", "--bridgeadapter4", DTL.pack "wlan0" ]
+  where v = vbManageVM_ sbVm
+
+update :: SmartBox -> ShIO ()
+update SmartBox{..} = do
+  v StorageAttach
+    [ "--device", "0"
+    , "--medium", DTL.pack sbIsoPath
+    , "--port", "1"
+    , "--storagectl", "IDE Controller"
+    , "--type", "dvddrive"
     ]
-  vmMgr ModifyVM
-    [ "--bridgeadapter1", DTL.pack (interface release)
-    , "--nic1", "bridged"
-    ]
+  where v = vbManageVM_ sbVm

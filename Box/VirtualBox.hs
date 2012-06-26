@@ -2,11 +2,12 @@ module Box.VirtualBox
        ( VBoxManageCmd(..)
        , VBoxManageVmCmd(..)
        , VBoxVM(..)
-       , manage
-       , manage_
-       , manageVM
-       , manageVM_
-       , properties
+       , vbox
+       , vbManage
+       , vbManage_
+       , vbManageVM
+       , vbManageVM_
+       , vbSysProps
        ) where
 
 import qualified Data.ByteString.Char8 as DBC
@@ -14,35 +15,35 @@ import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
-import           Prelude               hiding (FilePath)
 import           Shelly
 
 default (DTL.Text)
 
 -----------------------------------------------------------------------------
 
-data VBoxVM = VBoxVM { vmIdent :: DTL.Text }
-            deriving (Data, Typeable, Eq)
-
-instance Show VBoxVM where
-  show = show . vmIdent
+data VBoxVM = VBoxVM { ident :: DTL.Text }
+            deriving (Data, Show, Typeable, Eq)
 
 data VBoxManageCmd = CreateHD
-                   | CreateIDE
                    | CreateVM
                    | List
                    deriving (Data, Show, Typeable, Eq)
 
 data VBoxManageVmCmd = ModifyVM
-                     | ShowInfo
+                     | ShowVMInfo
                      | StorageAttach
+                     | StorageCtl
                      deriving (Data, Show, Typeable, Eq)
+
+type VBoxVMManager = VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
+
+type VBoxProperties = Map String String
 
 -----------------------------------------------------------------------------
 
-properties :: ShIO (Map String String)
-properties = do
-  p <- manage List [ "systemproperties" ]
+vbSysProps :: ShIO VBoxProperties
+vbSysProps = do
+  p <- vbManage List [ "systemproperties" ]
   return $ fromList $ map props $ lines $ DTL.unpack p
   where props     = tuple . map clean . split . pack
         tuple     = (\(k:v:_) -> (k, v))
@@ -59,25 +60,20 @@ vbox :: Bool -> [DTL.Text] -> ShIO ()
 vbox _headless@True  = run_ "VBoxHeadless"
 vbox _headless@False = run_ "VirtualBox"
 
-manage :: VBoxManageCmd -> [DTL.Text] -> ShIO DTL.Text
-manage vboxCmd args = manage' ((toLower vboxCmd):args)
+vbManage  :: VBoxManageCmd -> [DTL.Text] -> ShIO DTL.Text
+vbManage  vCmd args = manage'  ((toLower vCmd):args)
+vbManage_ :: VBoxManageCmd -> [DTL.Text] -> ShIO ()
+vbManage_ vCmd args = manage_' ((toLower vCmd):args)
 
-manage_ :: VBoxManageCmd -> [DTL.Text] -> ShIO ()
-manage_ vboxCmd args = manage_' ((toLower vboxCmd):args)
-
-manageVM :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO DTL.Text
-manageVM vm vboxCmd args = manage' ((toLower vboxCmd):(toText vm):args)
-
-manageVM_ :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
-manageVM_ vm vboxCmd args = manage_' ((toLower vboxCmd):(toText vm):args)
+vbManageVM  :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO DTL.Text
+vbManageVM  VBoxVM{..} vCmd args = manage'  ((toLower vCmd):ident:args)
+vbManageVM_ :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
+vbManageVM_ VBoxVM{..} vCmd args = manage_' ((toLower vCmd):ident:args)
 
 -----------------------------------------------------------------------------
--- Internal
------------------------------------------------------------------------------
 
-manage' :: [DTL.Text] -> ShIO DTL.Text
-manage' = run "VBoxManage"
-
+manage'  :: [DTL.Text] -> ShIO DTL.Text
+manage'  = run  "VBoxManage"
 manage_' :: [DTL.Text] -> ShIO ()
 manage_' = run_ "VBoxManage"
 
