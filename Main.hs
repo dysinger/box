@@ -1,5 +1,3 @@
-import           Box.SmartOS
-import           Box.VirtualBox
 import           Control.Exception      (SomeException)
 import           Data.Data
 import           Data.Map               (findWithDefault)
@@ -8,7 +6,10 @@ import           Shelly                 hiding (FilePath)
 import           System.Console.CmdArgs
 import           System.Directory
 import           System.Environment
-import           System.FilePath.Posix  (combine)
+import           System.FilePath.Posix
+
+import           SmartOS
+import           VirtualBox
 
 default (DTL.Text)
 

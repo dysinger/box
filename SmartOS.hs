@@ -1,4 +1,4 @@
-module Box.SmartOS
+module SmartOS
        ( SmartOS(..)
        , checkIso
        , downloadIso
