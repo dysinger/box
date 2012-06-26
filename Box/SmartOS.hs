@@ -1,9 +1,11 @@
 module Box.SmartOS
        ( SmartOS(..)
-       , soPlatform
-       , soDownload
-       , soIsoPath
-       , soIsoDirPath
+       , checkIso
+       , downloadIso
+       , isoDirPath
+       , isoPath
+       , isoUrl
+       , platform
        ) where
 
 import           Crypto.Conduit
@@ -17,58 +19,48 @@ import           Data.Data
 import           Data.Digest.Pure.MD5            hiding (md5)
 import qualified Data.Serialize                  as DS
 import           Network.HTTP.Conduit            hiding (def, path)
-import           System.Directory
-import           System.FilePath.Posix
+import           System.FilePath.Posix           hiding (FilePath)
 
-data SmartOS = SmartOS { soIsoName :: FilePath
-                         , soIsoMd5  :: String }
+-----------------------------------------------------------------------------
+
+data SmartOS = SmartOS { isoName :: FilePath
+                       , isoMd5  :: String }
               deriving (Data, Show, Typeable, Eq)
 
-soUrl :: String -> String
-soUrl = (++) "https://download.joyent.com/pub/iso/"
+isoUrl :: SmartOS -> String
+isoUrl SmartOS{..} = mirror isoName
 
-soIsoUrl :: SmartOS -> String
-soIsoUrl SmartOS{..} = soUrl soIsoName
+isoDirPath :: FilePath -> FilePath
+isoDirPath = flip combine ".smartos"
 
-soIsoPath :: SmartOS -> FilePath -> FilePath
-soIsoPath SmartOS{..} = flip combine soIsoName
+isoPath :: SmartOS -> FilePath -> FilePath
+isoPath SmartOS{..} = flip combine isoName
 
-soIsoDirPath :: FilePath -> FilePath
-soIsoDirPath = flip combine ".smartos"
-
-soPlatform :: IO SmartOS
-soPlatform = do
-  bs <- simpleHttp $ soUrl "md5sums.txt"
+platform :: IO SmartOS
+platform = do
+  bs <- simpleHttp $ mirror "md5sums.txt"
   let iso    = filter (DBC.isInfixOf $ DBC.pack "iso")
       string = DBC.unpack
       words' = DBC.words
       strict = DB.concat . DBL.toChunks
       lines' = DBC.lines
       latest = map string . words' . last . iso . lines' . strict $ bs
-  return $ SmartOS { soIsoMd5 = (latest !! 0), soIsoName = (latest !! 1) }
+  return SmartOS { isoMd5 = (latest !! 0), isoName = (latest !! 1) }
 
-soDownload :: SmartOS -> FilePath -> IO ()
-soDownload pf dir = do
-  let url  = soIsoUrl pf
-      path = soIsoPath pf dir
-  createDirectoryIfMissing True dir
-  exists <- doesFileExist path
-  if exists
-    then do checksum <- checksum path $ soIsoMd5 pf
-            case checksum of
-              Left hex -> do putStrLn $ "fail! " ++ hex
-                             download url path
-              _      -> return ()
-    else download url path
-  where
-    download url path = do
-      putStrLn $ "downloading " ++ path
-      request <- parseUrl url
-      withManager $ \manager -> do
-        Response _ _ _ bsrc <- http request manager
-        bsrc $$ sinkFile path
-    checksum path md5 = do
-      putStrLn $ "checking " ++ path
-      hash <- runResourceT $ sourceFile path $$ sinkHash
-      let hex = DBC.unpack $ DBB.encode $ DS.encode (hash :: MD5Digest)
-      return $ if md5 /= hex then Left hex else Right md5
+checkIso :: FilePath -> String -> IO (Either String String)
+checkIso path md5 = do
+  hash <- runResourceT $ sourceFile path $$ sinkHash
+  let hex = DBC.unpack $ DBB.encode $ DS.encode (hash :: MD5Digest)
+  return $ if md5 /= hex then Left hex else Right md5
+
+downloadIso :: String -> FilePath -> IO ()
+downloadIso url path = do
+  request <- parseUrl url
+  withManager $ \manager -> do
+    Response _ _ _ bsrc <- http request manager
+    bsrc $$ sinkFile path
+
+-----------------------------------------------------------------------------
+
+mirror :: String -> String
+mirror = (++) "https://download.joyent.com/pub/iso/"

@@ -15,7 +15,7 @@ import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
-import           Shelly
+import           Shelly                hiding (FilePath)
 
 default (DTL.Text)
 
@@ -35,11 +35,7 @@ data VBoxManageVmCmd = ModifyVM
                      | StorageCtl
                      deriving (Data, Show, Typeable, Eq)
 
-type VBoxVMManager = VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
-
 type VBoxProperties = Map String String
-
------------------------------------------------------------------------------
 
 vbSysProps :: ShIO VBoxProperties
 vbSysProps = do
@@ -53,8 +49,6 @@ vbSysProps = do
         unpack    = DBC.unpack
         trim      = dropSpace . dropSpace
         dropSpace = reverse . dropWhile isSpace
-
------------------------------------------------------------------------------
 
 vbox :: Bool -> [DTL.Text] -> ShIO ()
 vbox _headless@True  = run_ "VBoxHeadless"
@@ -76,8 +70,6 @@ manage'  :: [DTL.Text] -> ShIO DTL.Text
 manage'  = run  "VBoxManage"
 manage_' :: [DTL.Text] -> ShIO ()
 manage_' = run_ "VBoxManage"
-
------------------------------------------------------------------------------
 
 toText :: forall a. Show a => a -> DTL.Text
 toText = DTL.pack . show
