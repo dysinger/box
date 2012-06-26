@@ -104,7 +104,7 @@ createOrUpdate sb@SmartBox{..} =
 
 create :: SmartBox -> ShIO ()
 create SmartBox{..} = do
-  echo "Creating a SmartBox instance"
+  echo "Creating VirtualBox instance"
   vbManage_ CreateVM
     [ "--name", ident sbVm
     , "--ostype", "OpenSolaris_64"
@@ -136,7 +136,7 @@ create SmartBox{..} = do
 
 update :: SmartBox -> ShIO ()
 update SmartBox{..} = do
-  echo "Updating the SmartBox instance"
+  echo "Updating VirtualBox instance"
   v StorageAttach
     [ "--device", "0"
     , "--medium", DTL.pack sbIsoPath
