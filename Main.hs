@@ -14,9 +14,8 @@ import           VirtualBox
 default (DTL.Text)
 
 -----------------------------------------------------------------------------
-
 data Option = Download
-            | Setup
+            | VBox
             deriving (Data, Eq, Show, Typeable)
 
 main :: IO ()
@@ -24,50 +23,55 @@ main = do
   xs    <- getArgs
   opts  <- (if null xs then withArgs ["--help"] else id) $ cmdArgsRun modes'
   home  <- getHomeDirectory
+  verb  <- getVerbosity
   pform <- platform
-  putStrLn $ "Latest SmartOS Platform is " ++ isoName pform
-  dispatch opts pform home
+  shelly
+    $ case verb of
+      Quiet  -> silently
+      Normal -> sub
+      Loud   -> verbosely
+    $ dispatch opts pform home
   where
     modes' =
       cmdArgsMode $ modes modes''
+      &= program (DTL.unpack $ DTL.toLower $ DTL.pack name')
       &= help "Manage Your SmartOS Boxes."
       &= helpArg [ explicit, name "help", name "h" ]
-      &= program (DTL.unpack $ DTL.toLower $ DTL.pack name')
-      &= summary ( summary' ++ " (c) 2012 Positive Inertia, LLC." )
-      &= verbosityArgs [ explicit, name "Verbose", name "V" ] []
-      &= versionArg [ explicit, name "version", name "v", summary summary' ]
-    modes'' = [ Download &= help "Download the latest SmartOS Platform"
-              , Setup    &= help "Setup a SmartOS VirtualBox instance" ]
+      &= summary ( name' ++ " version " ++ version'
+                   ++ " (c) 2012 Positive Inertia, LLC." )
+      &= versionArg [ explicit, name "version", name "V", summary version' ]
+      &= verbosity
+    modes'' = [ Download   &= help "Download the latest SmartOS Platform"
+              , VBox &= help "Setup a SmartOS VBox instance" ]
     name'    = "SmartBox"
     version' = "0.1.0"
-    summary' = name' ++ " version " ++ version'
-    dispatch Download = download
-    dispatch Setup    = setup
+    dispatch Download   = downloadSmartOS
+    dispatch VBox = setupVBoxVM
 
 -----------------------------------------------------------------------------
 
 -- TODO refactor more - need dependency-tracking tasks - checkout shake pkg
 
-download :: SmartOS -> FilePath -> IO ()
-download pform home = do
+downloadSmartOS :: SmartOS -> FilePath -> ShIO ()
+downloadSmartOS pform home = do
   let url'  = isoUrl pform
       dir'  = isoDirPath home
       path' = isoPath pform dir'
-  createDirectoryIfMissing True dir'
-  exists <- doesFileExist path'
-  if exists
-    then do putStr $ "Checking " ++ path' ++ " "
-            c <- checkIso path' $ isoMd5 pform
+  liftIO $ createDirectoryIfMissing True dir'
+  isoExists <- liftIO $ doesFileExist path'
+  if isoExists
+    then do echo_n $ DTL.pack $ "Checking " ++ path' ++ " "
+            c <- liftIO $ checkIso path' $ isoMd5 pform
             case c of
-              Right _ -> do putStrLn "[GOOD]"
+              Right _ -> do echo "[GOOD]"
                             return ()
-              _       -> do putStrLn "[CORRUPT!]"
+              _       -> do echo "[CORRUPT!]"
                             download' url' path'
     else download' url' path'
   where download' u p = do
-          putStrLn $ "Downloading " ++ isoName pform
-          downloadIso u p
-          download pform home
+          echo $ DTL.pack $ "Downloading " ++ (show $ isoName pform)
+          liftIO $ downloadIso u p
+          downloadSmartOS pform home
 
 data SmartBox = SmartBox { sbVm         :: VBoxVM
                          , sbVmDirPath  :: FilePath
@@ -77,10 +81,10 @@ data SmartBox = SmartBox { sbVm         :: VBoxVM
                          }
               deriving (Data, Show, Typeable, Eq)
 
-setup :: SmartOS -> FilePath -> IO ()
-setup pform home = do
-  exists <- doesFileExist $ isoPath pform $ isoDirPath home
-  unless exists $ download pform home
+setupVBoxVM :: SmartOS -> FilePath -> ShIO ()
+setupVBoxVM pform home = do
+  isoExists <- liftIO $ doesFileExist $ isoPath pform $ isoDirPath home
+  unless isoExists $ downloadSmartOS pform home
   shelly $ silently $ do
     properties <- vbSysProps
     let vm     = VBoxVM "smartbox"
@@ -89,24 +93,24 @@ setup pform home = do
         disk   = flip combine "zones.vdi"                      $ dir
         isoDir = isoDirPath home
         iso    = isoPath pform isoDir
-    createOrUpdate SmartBox { sbVm         = vm
-                            , sbVmDirPath  = dir
-                            , sbVmDiskPath = disk
-                            , sbIsoPath    = iso
-                            , sbPlatform   = pform
-                            }
+    createOrUpdateVBoxVM SmartBox { sbVm         = vm
+                                  , sbVmDirPath  = dir
+                                  , sbVmDiskPath = disk
+                                  , sbIsoPath    = iso
+                                  , sbPlatform   = pform
+                                  }
     echo "Done"
 
-createOrUpdate :: SmartBox -> ShIO ()
-createOrUpdate sb@SmartBox{..} =
+createOrUpdateVBoxVM :: SmartBox -> ShIO ()
+createOrUpdateVBoxVM sb@SmartBox{..} =
   do vbManageVM_ sbVm ShowVMInfo []
-     update sb
+     updateVBoxVM sb
   `catch_sh`
-  (\(_e :: SomeException) -> create sb)
+  (\(_e :: SomeException) -> createVBoxVM sb)
 
-create :: SmartBox -> ShIO ()
-create SmartBox{..} = do
-  echo "Creating VirtualBox instance"
+createVBoxVM :: SmartBox -> ShIO ()
+createVBoxVM SmartBox{..} = do
+  echo "Creating SmartOS VBox instance"
   vbManage_ CreateVM
     [ "--name", ident sbVm
     , "--ostype", "OpenSolaris_64"
@@ -136,9 +140,9 @@ create SmartBox{..} = do
   v ModifyVM [ "--nic4", "bridged", "--bridgeadapter4", DTL.pack "wlan0" ]
   where v = vbManageVM_ sbVm
 
-update :: SmartBox -> ShIO ()
-update SmartBox{..} = do
-  echo "Updating VirtualBox instance"
+updateVBoxVM :: SmartBox -> ShIO ()
+updateVBoxVM SmartBox{..} = do
+  echo "Updating SmartOS VBox instance"
   v StorageAttach
     [ "--device", "0"
     , "--medium", DTL.pack sbIsoPath
