@@ -46,6 +46,8 @@ main = do
 
 -----------------------------------------------------------------------------
 
+-- TODO refactor more - need dependency-tracking tasks - checkout shake pkg
+
 download :: SmartOS -> FilePath -> IO ()
 download pform home = do
   let url'  = isoUrl pform
