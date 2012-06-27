@@ -20,9 +20,10 @@ import qualified Data.Serialize             as DS
 import qualified Data.Text.Lazy             as DTL
 import qualified Data.Text.Lazy.Encoding    as DTLE
 import           Network.HTTP.Conduit       hiding (def, path)
+import           System.Directory           (doesFileExist)
+
 import           Prelude                    hiding (FilePath)
 import           Shell
-import           System.Directory           (doesFileExist)
 
 default (DTL.Text)
 

@@ -2,11 +2,12 @@ import           Control.Exception      (SomeException)
 import           Data.Data
 import           Data.Map               (findWithDefault)
 import qualified Data.Text.Lazy         as DTL
+import           System.Console.CmdArgs
+import           System.Environment     (getArgs, withArgs)
+
 import           Prelude                hiding (FilePath)
 import           Shell
 import           SmartOS
-import           System.Console.CmdArgs
-import           System.Environment     (getArgs, withArgs)
 import           VirtualBox
 
 default (DTL.Text)
@@ -68,8 +69,8 @@ setupVBoxVM pform@SmartOS{..} = do
   home <- homePath
   let vm          = VBoxVM "smartbox"
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
-      vmDirPath   = vmBasePath </> (DTL.unpack . ident $ vm)
-      diskPath    = vmDirPath </> ("zones.vdi" :: FilePath)
+      vmDirPath   = vmBasePath </> (txtToStr . ident $ vm)
+      diskPath    = vmDirPath </> "zones.vdi"
       isoPath'    = isoPath pform (isoDirPath home)
   createOrUpdateVBoxVM SmartBox { sbVm         = vm
                                 , sbVmDirPath  = vmDirPath

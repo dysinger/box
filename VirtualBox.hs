@@ -15,6 +15,7 @@ import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
+
 import           Prelude               hiding (FilePath)
 import           Shell
 
@@ -73,9 +74,3 @@ manage'  :: [DTL.Text] -> ShIO DTL.Text
 manage'  = run  "VBoxManage"
 manage_' :: [DTL.Text] -> ShIO ()
 manage_' = run_ "VBoxManage"
-
-toText :: forall a. Show a => a -> DTL.Text
-toText = DTL.pack . show
-
-toLower :: forall a. Show a => a -> DTL.Text
-toLower = DTL.toLower . toText
