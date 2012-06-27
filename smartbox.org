@@ -1,0 +1,72 @@
+#+TITLE:   SmartBox: SmartOS Box Setup/Management
+#+AUTHOR:  Tim Dysinger
+#+EMAIL:   tim@dysinger.net
+
+* Description
+
+* Installation
+
+*** Download a Binary for your OS/Arch
+
+    [ This is how bootstraping works ]
+
+*** Compile from Source
+
+***** GHC
+
+***** Haskell Platform
+
+***** Cabal Install
+
+* FAQ
+
+* Todo List
+
+*** PROJ SmartOS guest zones with networking
+    :LOGBOOK:
+    - State "PROJ"       from "TODO"       [2012-06-27 Wed 12:37]
+    - State "TODO"       from ""           [2012-06-27 Wed 12:17]
+    :END:
+    :PROPERTIES:
+    :ORDERED:  t
+    :END:
+***** TODO Create admin & external vlans (zone vlans) on SmartOS
+      :LOGBOOK:
+      - State "TODO"       from ""           [2012-06-27 Wed 12:47]
+      :END:
+***** TODO Persist the network changes across reboots of SmartOS
+      :LOGBOOK:
+      - State "TODO"       from ""           [2012-06-27 Wed 12:48]
+      :END:
+***** TODO Create a SmartOS zone and try the vlan networking
+      :LOGBOOK:
+      - State "TODO"       from ""           [2012-06-27 Wed 12:48]
+      :END:
+
+*** PROJ Run a command over SSH session on SmartOS
+    :LOGBOOK:
+    - State "PROJ"       from "TODO"       [2012-06-27 Wed 12:37]
+    - State "TODO"       from ""           [2012-06-27 Wed 12:17]
+    :END:
+    :PROPERTIES:
+    :ORDERED:  t
+    :END:
+***** TODO What SSH libs do I have in Haskell?
+      :LOGBOOK:
+      - State "TODO"       from ""           [2012-06-27 Wed 12:38]
+      :END:
+***** TODO Does command line SSH interaction work with Shelly?
+      :LOGBOOK:
+      - State "TODO"       from ""           [2012-06-27 Wed 12:38]
+      :END:
+      (what about ssh passwords ?)
+
+*** TODO Create a complete post install scrript 
+    :LOGBOOK:
+    - State "TODO"       from ""           [2012-06-27 Wed 12:18]
+    :END:
+
+*** TODO Get off of String and move everthing to Text
+    :LOGBOOK:
+    - State "TODO"       from ""           [2012-06-27 Wed 12:28]
+    :END:
