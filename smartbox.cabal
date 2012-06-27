@@ -38,4 +38,5 @@ executable              smartbox
                       , pureMD5
                       , shelly
                       , text
+                      , text-icu
                       , transformers
