@@ -15,7 +15,8 @@ import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
 import qualified Data.Text.Lazy        as DTL
-import           Shelly                hiding (FilePath)
+import           Prelude               hiding (FilePath)
+import           Shell
 
 default (DTL.Text)
 
@@ -36,6 +37,8 @@ data VBoxManageVmCmd = ModifyVM
                      deriving (Data, Show, Typeable, Eq)
 
 type VBoxProperties = Map String String
+
+-- TODO get off DBC! and back to DTL!
 
 vbSysProps :: ShIO VBoxProperties
 vbSysProps = do
