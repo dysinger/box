@@ -1,3 +1,6 @@
 /cabal-dev
 /dist
-*.iso
+/*.iso
+/*.html
+/*.pdf
+/*.tex
