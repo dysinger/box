@@ -1,4 +1,4 @@
-module VirtualBox
+module SmartBox.VirtualBox
        ( VBoxManageCmd(..)
        , VBoxManageVmCmd(..)
        , VBoxVM(..)
@@ -10,17 +10,15 @@ module VirtualBox
        , vbSysProps
        ) where
 
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Char8 as BC
 import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
 import           Data.Text.Lazy        (Text)
-
-import           Shell
-
 import qualified Prelude               as P
 import           Prelude               hiding (FilePath)
 import           Shelly
+import           SmartBox.Text
 
 default (Text)
 
@@ -43,8 +41,6 @@ data VBoxManageVmCmd = ModifyVM
 
 type VBoxProperties = Map String String
 
--- TODO get off DBC! and back to DTL!
-
 vbSysProps :: ShIO VBoxProperties
 vbSysProps = do
   p <- vbManage List [ "systemproperties" ]
@@ -52,9 +48,9 @@ vbSysProps = do
   where props     = tuple . map clean . split . pack
         tuple     = (\(k:v:_) -> (k, v))
         clean     = trim . unpack
-        split     = C.split ':'
-        pack      = C.pack
-        unpack    = C.unpack
+        split     = BC.split ':'
+        pack      = BC.pack
+        unpack    = BC.unpack
         trim      = dropSpace . dropSpace
         dropSpace = reverse . dropWhile isSpace
 

@@ -2,16 +2,15 @@ import           Control.Exception      (SomeException)
 import           Data.Data
 import           Data.Map               (findWithDefault)
 import           Data.Text.Lazy         (Text)
+import qualified Prelude                as P
+import           Prelude                hiding (FilePath)
+import           Shelly
+import           SmartBox.Shell
+import           SmartBox.SmartOS
+import           SmartBox.Text
+import           SmartBox.VirtualBox
 import           System.Console.CmdArgs
 import           System.Environment     (getArgs, withArgs)
-
-import           Shell
-import           SmartOS
-import           VirtualBox
-
-import qualified Prelude          as P
-import           Prelude          hiding (FilePath)
-import           Shelly
 
 default (Text)
 

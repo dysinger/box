@@ -1,4 +1,4 @@
-module SmartOS
+module SmartBox.SmartOS
        ( SmartOS(..)
        , checksum
        , checksumDownload
@@ -18,12 +18,12 @@ import           Data.Digest.Pure.MD5 (MD5Digest)
 import           Data.Text.Lazy       (Text)
 import qualified Data.Text.Lazy       as T
 import qualified Network.HTTP.Conduit as C
-import           Shell
-import           System.Directory     (doesFileExist)
-
 import qualified Prelude              as P
 import           Prelude              hiding (FilePath)
 import           Shelly
+import           SmartBox.Shell
+import           SmartBox.Text
+import           System.Directory     (doesFileExist)
 
 default (Text)
 

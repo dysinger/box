@@ -1,4 +1,4 @@
-module Shell where
+module SmartBox.Text where
 
 import qualified Data.ByteString.Base16  as BB
 import qualified Data.ByteString.Char8   as BC
@@ -7,8 +7,6 @@ import qualified Data.Serialize          as S
 import           Data.Text.Lazy          (Text)
 import qualified Data.Text.Lazy          as T
 import qualified Data.Text.Lazy.Encoding as T
-import           System.Directory
-
 import qualified Prelude                 as P
 import           Prelude                 hiding (FilePath)
 import           Shelly
@@ -16,16 +14,6 @@ import           Shelly
 default (Text)
 
 -----------------------------------------------------------------------------
-
-homePath :: ShIO FilePath
-homePath = return . fromText . T.pack =<< liftIO getHomeDirectory
-
-status :: [Text] -> ShIO a -> ShIO a
-status msg shio = do
-  let msg' = T.unwords msg
-  echo msg'
-  x <- shio
-  return x
 
 txtToStr :: Text -> String
 txtToStr = T.unpack
