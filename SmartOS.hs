@@ -9,31 +9,31 @@ module SmartOS
        , platform
        ) where
 
-import           Crypto.Conduit
-import qualified Data.ByteString.Base16     as DBB
-import qualified Data.ByteString.Char8      as DBC
-import           Data.Conduit
-import           Data.Conduit.Binary        hiding (dropWhile, lines, take)
+import qualified Crypto.Conduit       as C
+import           Data.Conduit         (($$))
+import qualified Data.Conduit         as C
+import qualified Data.Conduit.Binary  as C
 import           Data.Data
-import           Data.Digest.Pure.MD5       hiding (md5)
-import qualified Data.Serialize             as DS
-import qualified Data.Text.Lazy             as DTL
-import qualified Data.Text.Lazy.Encoding    as DTLE
-import           Network.HTTP.Conduit       hiding (def, path)
-import           System.Directory           (doesFileExist)
-
-import           Prelude                    hiding (FilePath)
+import           Data.Digest.Pure.MD5 (MD5Digest)
+import           Data.Text.Lazy       (Text)
+import qualified Data.Text.Lazy       as T
+import qualified Network.HTTP.Conduit as C
 import           Shell
+import           System.Directory     (doesFileExist)
 
-default (DTL.Text)
+import qualified Prelude              as P
+import           Prelude              hiding (FilePath)
+import           Shelly
+
+default (Text)
 
 -----------------------------------------------------------------------------
 
-data SmartOS = SmartOS { isoName :: DTL.Text
-                       , isoMd5  :: DTL.Text }
+data SmartOS = SmartOS { isoName :: Text
+                       , isoMd5  :: Text }
               deriving (Data, Show, Typeable, Eq)
 
-isoUrl :: SmartOS -> DTL.Text
+isoUrl :: SmartOS -> Text
 isoUrl SmartOS{..} = mirror isoName
 
 isoPath :: SmartOS -> FilePath -> FilePath
@@ -44,50 +44,48 @@ isoDirPath = flip (</>) (".smartos" :: FilePath)
 
 platform :: ShIO SmartOS
 platform =
-  status "Fetching SmartOS Platform release list" $ do
-    bs <- liftIO . simpleHttp . DTL.unpack . mirror $ "md5sums.txt"
-    let words' = map DTL.words
-        isos   = filter . DTL.isInfixOf $ "iso"
-        last'  = last . words' . isos . DTL.lines . DTLE.decodeUtf8 $ bs
-    return SmartOS { isoMd5 = (last' !! 0), isoName = (last' !! 1) }
+  status ["Fetching SmartOS Platform release list"] $ do
+    bs <- liftIO . C.simpleHttp . txtToStr . mirror $ "md5sums.txt"
+    let isIso  = filter . T.isInfixOf $ "iso"
+        line   = last . (map T.words) . isIso . bsToTxtLines $ bs
+    return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
 
 checksumDownload :: SmartOS -> ShIO ()
-checksumDownload pform@SmartOS{..} = do
+checksumDownload so@SmartOS{..} = do
   home <- homePath
   let path'     = (isoDirPath home) </> isoName
-      download' = download pform >> checksumDownload pform
-  isoExists <- liftIO $ doesFileExist (DTL.unpack $ toTextIgnore path')
+      download' = download so >> checksumDownload so
+  isoExists <- liftIO $ doesFileExist (T.unpack $ toTextIgnore path')
   if isoExists
-    then do c <- checksum pform
+    then do c <- checksum so
             case c of
               Right _ -> return ()
               _       -> download'
     else download'
 
-checksum :: SmartOS -> ShIO (Either DTL.Text DTL.Text)
+checksum :: SmartOS -> ShIO (Either Text Text)
 checksum SmartOS{..} = do
   home <- homePath
   let isoPath' = toTextIgnore $ (isoDirPath home) </> isoName
-  status (DTL.append "Checking " isoPath') $ do
-    hash <- runResourceT $ sourceFile (DTL.unpack isoPath') $$ sinkHash
-    let md5' = DTL.pack . DBC.unpack . DBB.encode . DS.encode $ (hash :: MD5Digest)
+  status ["Checking", isoPath'] $ do
+    hash <- C.runResourceT $ C.sourceFile (txtToStr isoPath') $$ C.sinkHash
+    let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
 
 download :: SmartOS -> ShIO ()
-download pform@SmartOS{..} = do
+download so@SmartOS{..} = do
   home <- homePath
   let isoDirPath' = isoDirPath $ home
       isoPath'    = isoDirPath' </> isoName
-      isoPath''   = toTextIgnore isoPath'
-      isoUrl'     = isoUrl pform
-  status (DTL.append "Downloading " isoPath'') $ do
+      isoUrl'     = isoUrl so
+  status ["Downloading", fpToTxt isoPath'] $ do
     mkdir_p isoDirPath'
-    request <- parseUrl (DTL.unpack isoUrl')
-    withManager $ \manager -> do
-      Response _ _ _ bsrc <- http request manager
-      bsrc $$ sinkFile (DTL.unpack $ toTextIgnore isoPath')
+    request <- C.parseUrl (T.unpack isoUrl')
+    C.withManager $ \manager -> do
+      C.Response _ _ _ bsrc <- C.http request manager
+      bsrc $$ C.sinkFile (fpToGfp isoPath')
 
 -----------------------------------------------------------------------------
 
-mirror :: DTL.Text -> DTL.Text
-mirror = DTL.append "https://download.joyent.com/pub/iso/"
+mirror :: Text -> Text
+mirror = T.append "https://download.joyent.com/pub/iso/"

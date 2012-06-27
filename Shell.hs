@@ -1,37 +1,42 @@
-module Shell ( module Shell
-             , module Shelly
-             ) where
+module Shell where
 
-import qualified Data.Text.Lazy   as DTL
+import qualified Data.ByteString.Base16  as BB
+import qualified Data.ByteString.Char8   as BC
+import qualified Data.ByteString.Lazy    as B
+import qualified Data.Serialize          as S
+import           Data.Text.Lazy          (Text)
+import qualified Data.Text.Lazy          as T
+import qualified Data.Text.Lazy.Encoding as T
 import           System.Directory
 
-import qualified Prelude          as P
-import           Prelude          hiding (FilePath)
+import qualified Prelude                 as P
+import           Prelude                 hiding (FilePath)
 import           Shelly
 
-default (DTL.Text)
+default (Text)
 
 -----------------------------------------------------------------------------
 
 homePath :: ShIO FilePath
-homePath = return . fromText . DTL.pack =<< liftIO getHomeDirectory
+homePath = return . fromText . T.pack =<< liftIO getHomeDirectory
 
-status :: DTL.Text -> ShIO a -> ShIO a
+status :: [Text] -> ShIO a -> ShIO a
 status msg shio = do
-  echo msg
+  let msg' = T.unwords msg
+  echo msg'
   x <- shio
   return x
 
-txtToStr :: DTL.Text -> String
-txtToStr = DTL.unpack
+txtToStr :: Text -> String
+txtToStr = T.unpack
 
-strToTxt :: String -> DTL.Text
-strToTxt = DTL.pack
+strToTxt :: String -> Text
+strToTxt = T.pack
 
-fpToTxt :: FilePath -> DTL.Text
+fpToTxt :: FilePath -> Text
 fpToTxt = toTextIgnore
 
-txtToFp :: DTL.Text -> FilePath
+txtToFp :: Text -> FilePath
 txtToFp = fromText
 
 fpToGfp :: FilePath -> P.FilePath
@@ -40,8 +45,23 @@ fpToGfp = txtToStr . fpToTxt
 gfpToFp :: P.FilePath -> FilePath
 gfpToFp = txtToFp . strToTxt
 
-toText :: forall a. Show a => a -> DTL.Text
-toText = DTL.pack . show
+toTxt :: forall a. Show a => a -> Text
+toTxt = strToTxt . show
 
-toLower :: forall a. Show a => a -> DTL.Text
-toLower = DTL.toLower . toText
+toLower :: Text -> Text
+toLower = T.toLower
+
+toLowerTxt :: forall a. Show a => a -> Text
+toLowerTxt = toLower . toTxt
+
+txtToLowerStr :: Text -> String
+txtToLowerStr = T.unpack . toLower
+
+bsToTxt :: B.ByteString -> Text
+bsToTxt = T.decodeUtf8
+
+bsToTxtLines :: B.ByteString -> [Text]
+bsToTxtLines = T.lines . bsToTxt
+
+toHexTxt :: forall a. S.Serialize a => a -> Text
+toHexTxt = T.pack . BC.unpack . BB.encode . S.encode

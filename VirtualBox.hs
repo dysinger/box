@@ -10,20 +10,24 @@ module VirtualBox
        , vbSysProps
        ) where
 
-import qualified Data.ByteString.Char8 as DBC
+import qualified Data.ByteString.Char8 as C
 import           Data.Char             (isSpace)
 import           Data.Data
 import           Data.Map              (Map, fromList)
-import qualified Data.Text.Lazy        as DTL
+import           Data.Text.Lazy        (Text)
 
-import           Prelude               hiding (FilePath)
 import           Shell
 
-default (DTL.Text)
+import qualified Prelude               as P
+import           Prelude               hiding (FilePath)
+import           Shelly
+
+default (Text)
 
 -----------------------------------------------------------------------------
 
-data VBoxVM = VBoxVM { ident :: DTL.Text }
+data VBoxVM = VBoxVM { vmIdent   :: Text
+                     , vmDirPath :: FilePath }
             deriving (Data, Show, Typeable, Eq)
 
 data VBoxManageCmd = CreateHD
@@ -44,33 +48,33 @@ type VBoxProperties = Map String String
 vbSysProps :: ShIO VBoxProperties
 vbSysProps = do
   p <- vbManage List [ "systemproperties" ]
-  return $ fromList $ map props $ lines $ DTL.unpack p
+  return $ fromList $ map props $ lines $ txtToStr p
   where props     = tuple . map clean . split . pack
         tuple     = (\(k:v:_) -> (k, v))
         clean     = trim . unpack
-        split     = DBC.split ':'
-        pack      = DBC.pack
-        unpack    = DBC.unpack
+        split     = C.split ':'
+        pack      = C.pack
+        unpack    = C.unpack
         trim      = dropSpace . dropSpace
         dropSpace = reverse . dropWhile isSpace
 
-vbox :: Bool -> [DTL.Text] -> ShIO ()
+vbox :: Bool -> [Text] -> ShIO ()
 vbox _headless@True  = run_ "VBoxHeadless"
 vbox _headless@False = run_ "VirtualBox"
 
-vbManage  :: VBoxManageCmd -> [DTL.Text] -> ShIO DTL.Text
-vbManage  vCmd args = manage'  ((toLower vCmd):args)
-vbManage_ :: VBoxManageCmd -> [DTL.Text] -> ShIO ()
-vbManage_ vCmd args = manage_' ((toLower vCmd):args)
+vbManage  :: VBoxManageCmd -> [Text] -> ShIO Text
+vbManage  vCmd args = manage'  ((toLowerTxt vCmd):args)
+vbManage_ :: VBoxManageCmd -> [Text] -> ShIO ()
+vbManage_ vCmd args = manage_' ((toLowerTxt vCmd):args)
 
-vbManageVM  :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO DTL.Text
-vbManageVM  VBoxVM{..} vCmd args = manage'  ((toLower vCmd):ident:args)
-vbManageVM_ :: VBoxVM -> VBoxManageVmCmd -> [DTL.Text] -> ShIO ()
-vbManageVM_ VBoxVM{..} vCmd args = manage_' ((toLower vCmd):ident:args)
+vbManageVM  :: VBoxVM -> VBoxManageVmCmd -> [Text] -> ShIO Text
+vbManageVM  VBoxVM{..} vCmd args = manage'  ((toLowerTxt vCmd):vmIdent:args)
+vbManageVM_ :: VBoxVM -> VBoxManageVmCmd -> [Text] -> ShIO ()
+vbManageVM_ VBoxVM{..} vCmd args = manage_' ((toLowerTxt vCmd):vmIdent:args)
 
 -----------------------------------------------------------------------------
 
-manage'  :: [DTL.Text] -> ShIO DTL.Text
+manage'  :: [Text] -> ShIO Text
 manage'  = run  "VBoxManage"
-manage_' :: [DTL.Text] -> ShIO ()
+manage_' :: [Text] -> ShIO ()
 manage_' = run_ "VBoxManage"
