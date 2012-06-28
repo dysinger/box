@@ -63,12 +63,12 @@ data Box = Box { sbVm         :: VBoxVM
               deriving (Data, Show, Typeable, Eq)
 
 setupVBoxVM :: SmartOS -> ShIO ()
-setupVBoxVM pform@SmartOS{..} = do
-  checksumDownload pform
+setupVBoxVM so@SmartOS{..} = do
+  checksumDownload so
   props <- vbSysProps
   home <- homePath
   let diskPath    = vmDirPath' </> "zones.vdi"
-      isoPath'    = isoPath pform (isoDirPath home)
+      isoPath'    = isoPath so (isoDirPath home)
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
       vm          = VBoxVM { vmIdent = "smartbox"
@@ -76,7 +76,7 @@ setupVBoxVM pform@SmartOS{..} = do
   createOrUpdateVBoxVM Box { sbVm         = vm
                                 , sbVmDiskPath = diskPath
                                 , sbIsoPath    = isoPath'
-                                , sbPlatform   = pform }
+                                , sbPlatform   = so }
 
 createOrUpdateVBoxVM :: Box -> ShIO ()
 createOrUpdateVBoxVM sb@Box{..} =
