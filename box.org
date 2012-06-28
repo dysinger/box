@@ -1,4 +1,4 @@
-#+TITLE:     SmartBox: SmartOS Box Setup/Management
+#+TITLE:     Box Management
 #+AUTHOR:    Tim Dysinger
 #+EMAIL:     tim@dysinger.net
 #+FILETAGS:  HASKELL SMARTOS @COMPUTER PROJECT
