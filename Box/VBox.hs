@@ -1,4 +1,4 @@
-module Box.VirtualBox
+module Box.VBox
        ( VBoxManageCmd(..)
        , VBoxManageVmCmd(..)
        , VBoxVM(..)
