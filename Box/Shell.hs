@@ -1,4 +1,4 @@
-module SmartBox.Shell where
+module Box.Shell where
 
 import           Data.Text.Lazy          (Text)
 import qualified Data.Text.Lazy          as T

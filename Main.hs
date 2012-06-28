@@ -5,10 +5,10 @@ import           Data.Text.Lazy         (Text)
 import qualified Prelude                as P
 import           Prelude                hiding (FilePath)
 import           Shelly
-import           SmartBox.Shell
-import           SmartBox.SmartOS
-import           SmartBox.Text
-import           SmartBox.VirtualBox
+import           Box.Shell
+import           Box.SmartOS
+import           Box.Text
+import           Box.VBox
 import           System.Console.CmdArgs
 import           System.Environment     (getArgs, withArgs)
 
@@ -45,7 +45,7 @@ main = do
       &= verbosity
     modes'' = [ Download &= help "Download the latest SmartOS Platform"
               , VBox     &= help "Setup a SmartOS VBox instance" ]
-    name'    = "SmartBox"
+    name'    = "Box"
     version' = "0.1.0"
     dispatch Download = checksumDownload
     dispatch VBox     = setupVBoxVM
@@ -56,7 +56,7 @@ main = do
 -- TODO need ssh/scp abilities for bootstrapping
 -- TODO still need subcommands
 
-data SmartBox = SmartBox { sbVm         :: VBoxVM
+data Box = Box { sbVm         :: VBoxVM
                          , sbVmDiskPath :: FilePath
                          , sbIsoPath    :: FilePath
                          , sbPlatform   :: SmartOS }
@@ -73,20 +73,20 @@ setupVBoxVM pform@SmartOS{..} = do
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
       vm          = VBoxVM { vmIdent = "smartbox"
                            , vmDirPath = vmDirPath' }
-  createOrUpdateVBoxVM SmartBox { sbVm         = vm
+  createOrUpdateVBoxVM Box { sbVm         = vm
                                 , sbVmDiskPath = diskPath
                                 , sbIsoPath    = isoPath'
                                 , sbPlatform   = pform }
 
-createOrUpdateVBoxVM :: SmartBox -> ShIO ()
-createOrUpdateVBoxVM sb@SmartBox{..} =
+createOrUpdateVBoxVM :: Box -> ShIO ()
+createOrUpdateVBoxVM sb@Box{..} =
   do vbManageVM_ sbVm ShowVMInfo []
      updateVBoxVM sb
   `catch_sh`
   (\(_e :: SomeException) -> createVBoxVM sb)
 
-createVBoxVM :: SmartBox -> ShIO ()
-createVBoxVM sb@SmartBox{..} = do
+createVBoxVM :: Box -> ShIO ()
+createVBoxVM sb@Box{..} = do
   status ["Creating a SmartOS VBox instance", vmDirPath']
     $ vbManage_ CreateVM [ "--name", vmIdent sbVm
                          , "--ostype", "OpenSolaris_64"
@@ -118,8 +118,8 @@ createVBoxVM sb@SmartBox{..} = do
         vmDirPath' = fpToTxt . vmDirPath    $ sbVm
         vmDiskPath = fpToTxt                $ sbVmDiskPath
 
-updateVBoxVM :: SmartBox -> ShIO ()
-updateVBoxVM SmartBox{..} = do
+updateVBoxVM :: Box -> ShIO ()
+updateVBoxVM Box{..} = do
   status ["Attaching SmartOS ISO", fpToTxt sbIsoPath]
     $ vbManageVM_ sbVm StorageAttach [ "--device", "0"
                                      , "--medium", toTextIgnore sbIsoPath

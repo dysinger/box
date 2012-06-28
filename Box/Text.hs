@@ -1,4 +1,4 @@
-module SmartBox.Text where
+module Box.Text where
 
 import qualified Data.ByteString.Base16  as BB
 import qualified Data.ByteString.Char8   as BC

@@ -1,4 +1,4 @@
-module SmartBox.VirtualBox
+module Box.VirtualBox
        ( VBoxManageCmd(..)
        , VBoxManageVmCmd(..)
        , VBoxVM(..)
@@ -18,7 +18,7 @@ import           Data.Text.Lazy        (Text)
 import qualified Prelude               as P
 import           Prelude               hiding (FilePath)
 import           Shelly
-import           SmartBox.Text
+import           Box.Text
 
 default (Text)
 

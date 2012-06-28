@@ -1,4 +1,4 @@
-module SmartBox.SmartOS
+module Box.SmartOS
        ( SmartOS(..)
        , checksum
        , checksumDownload
@@ -21,8 +21,8 @@ import qualified Network.HTTP.Conduit as C
 import qualified Prelude              as P
 import           Prelude              hiding (FilePath)
 import           Shelly
-import           SmartBox.Shell
-import           SmartBox.Text
+import           Box.Shell
+import           Box.Text
 import           System.Directory     (doesFileExist)
 
 default (Text)
