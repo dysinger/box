@@ -1,1 +1,18 @@
-box.org
+#+TITLE:   Box Management
+#+STARTUP: content odd align hidestars hideblocks
+
+* Description
+
+* FAQ
+
+* Installation
+
+*** Download a binary for your os/arch
+
+*** Compile from source
+
+***** GHC
+
+***** Haskell Platform
+
+***** Cabal Install
