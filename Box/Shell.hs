@@ -1,5 +1,6 @@
 module Box.Shell where
 
+import           Data.Int
 import           Data.Text.Lazy          (Text)
 import qualified Data.Text.Lazy          as T
 import qualified Prelude                 as P
@@ -17,9 +18,14 @@ homePath = return . fromText . T.pack =<< liftIO getHomeDirectory
 
 status :: [Text] -> ShIO a -> ShIO a
 status msg m = do
-  let msg' = T.unwords msg
   verbosity' <- liftIO getVerbosity
   case verbosity' of
-    Quiet  -> trace msg'  >> m >>= return
-    Normal -> echo_n msg' >> m >>= \x -> do echo " [DONE]" ; return x
-    Loud   -> echo msg'   >> m >>= return
+    Normal -> echo_n (format msg') >> m >>= \x -> do echo done ; return x
+    _      -> trace msg'           >> m >>=                      return
+  where
+    diff       = (-) limit . T.length
+    done       = "[DONE]"
+    format txt = T.append txt $ T.take (diff txt) spaces
+    limit      = (80 :: Int64) - (T.length done)
+    msg'       = T.take limit . T.unwords $ msg
+    spaces     = T.fromChunks . repeat    $ " "
