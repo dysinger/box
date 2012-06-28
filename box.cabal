@@ -7,7 +7,7 @@ author:                 Tim Dysinger
 maintainer:             tim@dysinger.net
 category:               System
 build-type:             Simple
-cabal-version:          == 1.14.0
+cabal-version:          >= 1.14.0
 
 executable              box
   main-is:              Main.hs
@@ -37,7 +37,7 @@ executable              box
                       , remote
                       , shelly
                       , transformers
-                     -- bytestrings
+                     -- bytestring
                       , bytestring
                       , base16-bytestring
                       , base64-bytestring
