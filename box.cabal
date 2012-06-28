@@ -26,9 +26,6 @@ executable              box
                         TemplateHaskell
   build-depends:        base == 4.5.1.0
                       , aeson
-                      , base16-bytestring
-                      , base64-bytestring
-                      , bytestring
                       , cereal
                       , cmdargs
                       , containers
@@ -40,10 +37,14 @@ executable              box
                       , remote
                       , shelly
                       , transformers
-                     -- Text
+                     -- bytestrings
+                      , bytestring
+                      , base16-bytestring
+                      , base64-bytestring
+                     -- text
                       , text
                       , text-icu
-                     -- Conduit
+                     -- conduit
                       , conduit
                       , crypto-conduit
                       , http-conduit
