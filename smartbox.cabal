@@ -1,6 +1,6 @@
-name:                   smartbox
+name:                   box
 version:                0.1.0.0
-synopsis:               SmartOS Box Tools
+synopsis:               Box Management
 homepage:               http://dysinger.net
 license:                OtherLicense
 author:                 Tim Dysinger
@@ -9,8 +9,8 @@ category:               System
 build-type:             Simple
 cabal-version:          >= 1.14.0
 
-executable              sbadm
-  main-is:              SmartBox.hs
+executable              box
+  main-is:              Main.hs
   default-language:     Haskell2010
   ghc-options:          -O2
                         -Wall -fno-warn-type-defaults -fno-warn-unused-do-bind
