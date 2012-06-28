@@ -23,20 +23,28 @@ executable              sbadm
                         RankNTypes
                         RecordWildCards
                         ScopedTypeVariables
+                        TemplateHaskell
   build-depends:        base == 4.5.1.0
                       , aeson
                       , base16-bytestring
+                      , base64-bytestring
                       , bytestring
                       , cereal
                       , cmdargs
-                      , conduit
                       , containers
-                      , crypto-conduit
                       , directory
                       , filepath
-                      , http-conduit
+                      , hdaemonize
+                      , hsyslog
                       , pureMD5
+                      , remote
                       , shelly
+                      , transformers
+                     -- Text
                       , text
                       , text-icu
-                      , transformers
+                     -- Conduit
+                      , conduit
+                      , crypto-conduit
+                      , http-conduit
+                      , libssh2-conduit
