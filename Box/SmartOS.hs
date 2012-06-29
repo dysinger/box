@@ -24,6 +24,8 @@ import           System.Directory     (doesFileExist)
 
 default (Text)
 
+-- TODO we need to download the md5sum as a separate cached file
+
 isoUrl :: SmartOS -> Text
 isoUrl SmartOS{..} = mirror isoName
 
