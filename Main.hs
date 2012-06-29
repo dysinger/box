@@ -1,17 +1,17 @@
 module Main (main) where
 
-import           Control.Exception
-import           Data.Data
-import           Data.Map               hiding (null)
-import           Data.Text.Lazy         (Text)
-import           Prelude                hiding (FilePath)
-import           Shelly
-import           Box.Shell
-import           Box.SmartOS
-import           Box.Text
-import           Box.VBox
-import           System.Console.CmdArgs
-import           System.Environment
+import Box.Shell
+import Box.SmartOS
+import Box.Text
+import Box.VBox
+import Control.Exception
+import Data.Data
+import Data.Map                        hiding (null)
+import Data.Text.Lazy                  (Text)
+import Prelude                         hiding (FilePath)
+import Shelly
+import System.Console.CmdArgs          hiding (help, modes)
+import System.Console.CmdArgs.Explicit
 
 default (Text)
 
@@ -20,75 +20,118 @@ default (Text)
 
 -- TODO still need subcommands
 
-data Cmd = Download
+data Cmd = SmartOsDownload
          | VBox
          | Bootstrap { host :: Maybe String
                      , port :: Maybe Int }
+         | Help
+         | VBoxSetup
          deriving (Data, Eq, Show, Typeable)
 
-mode :: Mode (CmdArgs Cmd)
-mode =
-  cmdArgsMode $ modes appCmds
-  &= program (txtToLowerStr $ strToTxt name')
-  &= help "Manage Your SmartOS Boxes."
-  &= helpArg [ explicit, name "help", name "h" ]
-  &= summary ( name' ++ " version " ++ version'
-               ++ " (c) 2012 Positive Inertia, LLC." )
-  &= versionArg [ explicit, name "version", name "V", summary version' ]
-  &= verbosity
-  where
-    name'    = "Box"
-    version' = "0.1.0"
+instance Default Cmd where
+  def = Help
 
-appCmds :: [Cmd]
-appCmds =
-  [ Download
-    &= help "Check & Download the latest SmartOS Platform"
-  , VBox
-    &= help "Setup or Update your SmartOS VBox instance"
-  , Bootstrap { host = def
-                       &= help "The host to bootstrap"
-                       &= opt (Just ("127.0.0.1" :: String))
-                       &= typ "HOST"
-              , port = def
-                       &= help "The ssh port to use"
-                       &= opt (Just (22 :: Int))
-                       &= typ "PORT"
-              }
-    &= help "Bootstrap a SmartOS Box as a VM host"
-  ]
+appModes :: Mode Cmd
+appModes =
+  Mode { modeArgs       = ([], Nothing)
+       , modeCheck      = (\x -> Right x)
+       , modeGroupFlags = toGroup [ help, version ]
+       , modeGroupModes = toGroup [ smartOsMode, vBoxMode ]
+       , modeHelp       = "Box Management"
+       , modeHelpSuffix = []
+       , modeNames      = []
+       , modeReform     = (\x -> Just [show x])
+       , modeValue      = Help }
+
+help :: forall a. Flag a
+help = flagHelpSimple (\c -> c)
+
+version :: forall a. Flag a
+version = flagVersion (\c -> c)
+
+upd :: Update a
+upd _ v = Right v
 
 -- | Main entry point & processor of command line arguments
 main :: IO ()
 main = do
-  arguments  <- getArgs
-  options    <- (if null arguments then withArgs ["--help"] else id)
-                $ cmdArgsRun mode
+  command    <- processArgs appModes
   verbosity' <- getVerbosity
-  shelly
-    $ case verbosity' of
-      Quiet  -> silently  . print_stdout False . print_commands False
-      Normal -> sub       . print_stdout False . print_commands False
-      Loud   -> verbosely . print_stdout True  . print_commands True
-    $ do platform' <- platform
-         dispatch options platform'
+  if command == Help
+    then putStrLn . show $ helpText [] HelpFormatDefault appModes
+    else shelly
+         $ case verbosity' of
+           Quiet  -> silently  . print_stdout False . print_commands False
+           Normal -> sub       . print_stdout False . print_commands False
+           Loud   -> verbosely . print_stdout True  . print_commands True
+         $ platform >>= dispatch command
 
 -- | Dispatch a Cmd to it's appropriate function
 dispatch :: Cmd -> SmartOS -> ShIO ()
-dispatch Download        = checksumDownload
-dispatch VBox            = setupVBoxVM
-dispatch b@Bootstrap{..} = flip bootstrap b
+dispatch SmartOsDownload    = checksumDownload
+dispatch VBoxSetup          = setupVBoxVM
+-- dispatch b@Bootstrap{..} = flip bootstrap b
+dispatch _                  = throw $ Ex "Problem with Main.dispatch"
 
 -----------------------------------------------------------------------------
 -- Possible Exceptions
 
-data Ex = BootstrapEx Text
+data Ex = Ex Text
         deriving (Data, Eq, Show, Typeable)
 
 instance Exception Ex
 
 -----------------------------------------------------------------------------
--- VirtualBox Interaction
+-- SmartOS
+
+smartOsMode :: Mode Cmd
+smartOsMode =
+  Mode { modeArgs       = ([], Nothing)
+       , modeCheck      = (\x -> Right x)
+       , modeGroupFlags = toGroup []
+       , modeGroupModes = toGroup [ smartOsDownloadMode ]
+       , modeHelp       = "SmartOS Management"
+       , modeHelpSuffix = []
+       , modeNames      = ["smartos"]
+       , modeReform     = (\x -> Just [show x])
+       , modeValue      = Help }
+  where
+    smartOsDownloadMode =
+      Mode { modeArgs       = ([], Nothing)
+           , modeCheck      = (\x -> Right x)
+           , modeGroupFlags = toGroup []
+           , modeGroupModes = toGroup []
+           , modeHelp       = "SmartOS Download"
+           , modeHelpSuffix = []
+           , modeNames      = ["download"]
+           , modeReform     = (\x -> Just [show x])
+           , modeValue      = SmartOsDownload }
+
+-----------------------------------------------------------------------------
+-- VBox
+
+vBoxMode :: Mode Cmd
+vBoxMode =
+  Mode { modeArgs       = ([], Nothing)
+       , modeCheck      = (\x -> Right x)
+       , modeGroupFlags = toGroup []
+       , modeGroupModes = toGroup [ vBoxSetupMode ]
+       , modeHelp       = "VBox Management"
+       , modeHelpSuffix = []
+       , modeNames      = ["vbox"]
+       , modeReform     = (\x -> Just [show x])
+       , modeValue      = Help }
+  where
+    vBoxSetupMode =
+      Mode { modeArgs       = ([], Nothing)
+           , modeCheck      = (\x -> Right x)
+           , modeGroupFlags = toGroup []
+           , modeGroupModes = toGroup []
+           , modeHelp       = "VBox/SmartOS Setup"
+           , modeHelpSuffix = []
+           , modeNames      = ["setup"]
+           , modeReform     = (\x -> Just [show x])
+           , modeValue      = VBoxSetup }
 
 data Box = Box { sbVm         :: VBoxVM
                , sbVmDiskPath :: FilePath
@@ -107,7 +150,7 @@ data Box = Box { sbVm         :: VBoxVM
 --   -- boot virtualbox vm
 --   -- TODO where do we get the VBox instance? needs extracting
 
--- | Setup a VirtualBox instance with 4GB ram & 40GB disk for SmartOS
+-- | Setup a VBox instance with 4GB ram & 40GB disk for SmartOS
 setupVBoxVM :: SmartOS -> ShIO ()
 setupVBoxVM so@SmartOS{..} = do
   -- deps
@@ -126,7 +169,7 @@ setupVBoxVM so@SmartOS{..} = do
                            , sbIsoPath    = isoPath'
                            , sbPlatform   = so }
 
--- | create or update a VirtualBox instance depending on the current state
+-- | create or update a VBox instance depending on the current state
 createOrUpdateVBoxVM :: Box -> ShIO ()
 createOrUpdateVBoxVM sb@Box{..} =
   do vbManageVM_ sbVm ShowVMInfo []
@@ -134,7 +177,7 @@ createOrUpdateVBoxVM sb@Box{..} =
   `catch_sh`
   (\(_e :: SomeException) -> createVBoxVM sb)
 
--- | create a new VirtualBox instance
+-- | create a new VBox instance
 createVBoxVM :: Box -> ShIO ()
 createVBoxVM sb@Box{..} = do
   status ["Creating a SmartOS VBox instance", vmDirPath']
@@ -168,7 +211,7 @@ createVBoxVM sb@Box{..} = do
         vmDirPath' = fpToTxt . vmDirPath    $ sbVm
         vmDiskPath = fpToTxt                $ sbVmDiskPath
 
--- | update an existing VirtualBox instance
+-- | update an existing VBox instance
 updateVBoxVM :: Box -> ShIO ()
 updateVBoxVM Box{..} = do
   status ["Attaching SmartOS ISO", fpToTxt sbIsoPath]
