@@ -14,7 +14,8 @@ executable              box
   default-language:     Haskell2010
   ghc-options:          -O2
                         -Wall
-                        -fno-warn-incomplete-patterns
+                     -- -fno-warn-incomplete-patterns
+                     -- -fno-warn-incomplete-uni-patterns
                         -fno-warn-type-defaults
                         -rtsopts
                         -threaded
