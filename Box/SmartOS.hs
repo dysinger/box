@@ -1,7 +1,5 @@
 module Box.SmartOS
        ( SmartOS(..)
-       , checksum
-       , checksumDownload
        , download
        , isoDirPath
        , isoPath
@@ -9,29 +7,22 @@ module Box.SmartOS
        , platform
        ) where
 
+import           Box.Shell
+import           Box.Text
+import           Box.Types
 import qualified Crypto.Conduit       as C
 import           Data.Conduit         (($$))
 import qualified Data.Conduit         as C
 import qualified Data.Conduit.Binary  as C
-import           Data.Data
 import           Data.Digest.Pure.MD5 (MD5Digest)
 import           Data.Text.Lazy       (Text)
 import qualified Data.Text.Lazy       as T
 import qualified Network.HTTP.Conduit as C
-import qualified Prelude              as P
 import           Prelude              hiding (FilePath)
 import           Shelly
-import           Box.Shell
-import           Box.Text
 import           System.Directory     (doesFileExist)
 
 default (Text)
-
------------------------------------------------------------------------------
-
-data SmartOS = SmartOS { isoName :: Text
-                       , isoMd5  :: Text }
-              deriving (Data, Show, Typeable, Eq)
 
 isoUrl :: SmartOS -> Text
 isoUrl SmartOS{..} = mirror isoName
@@ -50,18 +41,18 @@ platform =
         line   = last . (map T.words) . isIso . bsToTxtLines $ bs
     return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
 
-checksumDownload :: SmartOS -> ShIO ()
-checksumDownload so@SmartOS{..} = do
+download :: SmartOS -> ShIO ()
+download so@SmartOS{..} = do
   home <- homePath
-  let path'     = (isoDirPath home) </> isoName
-      download' = download so >> checksumDownload so
+  let path' = (isoDirPath home) </> isoName
+      loop  = download' so >> download so
   isoExists <- liftIO $ doesFileExist (T.unpack $ toTextIgnore path')
   if isoExists
     then do c <- checksum so
             case c of
               Right _ -> return ()
-              _       -> download'
-    else download'
+              _       -> loop
+    else loop
 
 checksum :: SmartOS -> ShIO (Either Text Text)
 checksum SmartOS{..} = do
@@ -72,8 +63,8 @@ checksum SmartOS{..} = do
     let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
 
-download :: SmartOS -> ShIO ()
-download so@SmartOS{..} = do
+download' :: SmartOS -> ShIO ()
+download' so@SmartOS{..} = do
   home <- homePath
   let isoDirPath' = isoDirPath $ home
       isoPath'    = isoDirPath' </> isoName
@@ -84,8 +75,6 @@ download so@SmartOS{..} = do
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile (fpToGfp isoPath')
-
------------------------------------------------------------------------------
 
 mirror :: Text -> Text
 mirror = T.append "https://download.joyent.com/pub/iso/"

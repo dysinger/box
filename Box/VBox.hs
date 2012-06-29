@@ -1,45 +1,22 @@
 module Box.VBox
-       ( VBoxManageCmd(..)
-       , VBoxManageVmCmd(..)
-       , VBoxVM(..)
-       , vbox
-       , vbManage
-       , vbManage_
+       ( vbManage
        , vbManageVM
        , vbManageVM_
+       , vbManage_
        , vbSysProps
+       , vbox
        ) where
 
+import           Box.Text
+import           Box.Types.VBox
 import qualified Data.ByteString.Char8 as BC
 import           Data.Char             (isSpace)
-import           Data.Data
-import           Data.Map              (Map, fromList)
+import           Data.Map              (fromList)
 import           Data.Text.Lazy        (Text)
-import qualified Prelude               as P
 import           Prelude               hiding (FilePath)
 import           Shelly
-import           Box.Text
 
 default (Text)
-
------------------------------------------------------------------------------
-
-data VBoxVM = VBoxVM { vmIdent   :: Text
-                     , vmDirPath :: FilePath }
-            deriving (Data, Show, Typeable, Eq)
-
-data VBoxManageCmd = CreateHD
-                   | CreateVM
-                   | List
-                   deriving (Data, Show, Typeable, Eq)
-
-data VBoxManageVmCmd = ModifyVM
-                     | ShowVMInfo
-                     | StorageAttach
-                     | StorageCtl
-                     deriving (Data, Show, Typeable, Eq)
-
-type VBoxProperties = Map String String
 
 vbSysProps :: ShIO VBoxProperties
 vbSysProps = do
@@ -67,8 +44,6 @@ vbManageVM  :: VBoxVM -> VBoxManageVmCmd -> [Text] -> ShIO Text
 vbManageVM  VBoxVM{..} vCmd args = manage'  ((toLowerTxt vCmd):vmIdent:args)
 vbManageVM_ :: VBoxVM -> VBoxManageVmCmd -> [Text] -> ShIO ()
 vbManageVM_ VBoxVM{..} vCmd args = manage_' ((toLowerTxt vCmd):vmIdent:args)
-
------------------------------------------------------------------------------
 
 manage'  :: [Text] -> ShIO Text
 manage'  = run  "VBoxManage"
