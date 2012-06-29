@@ -13,8 +13,12 @@ executable              box
   main-is:              Main.hs
   default-language:     Haskell2010
   ghc-options:          -O2
-                        -Wall -fno-warn-type-defaults -fno-warn-unused-do-bind
-                        -rtsopts -threaded -static
+                        -Wall
+                        -fno-warn-incomplete-patterns
+                        -fno-warn-type-defaults
+                        -rtsopts
+                        -threaded
+                        -static
   default-extensions:   BangPatterns
                         DeriveDataTypeable
                         ExistentialQuantification
