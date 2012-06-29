@@ -1,8 +1,9 @@
-import           Control.Exception      (SomeException)
+module Main (main) where
+
+import           Control.Exception
 import           Data.Data
-import           Data.Map               (findWithDefault)
+import           Data.Map               hiding (null)
 import           Data.Text.Lazy         (Text)
-import qualified Prelude                as P
 import           Prelude                hiding (FilePath)
 import           Shelly
 import           Box.Shell
@@ -10,21 +11,59 @@ import           Box.SmartOS
 import           Box.Text
 import           Box.VBox
 import           System.Console.CmdArgs
-import           System.Environment     (getArgs, withArgs)
+import           System.Environment
 
 default (Text)
 
 -----------------------------------------------------------------------------
+-- CmdArgs Argument/Option Processing
 
-data Option = Download
-            | VBox
-            deriving (Data, Eq, Show, Typeable)
+-- TODO still need subcommands
 
+data Cmd = Download
+         | VBox
+         | Bootstrap { host :: Maybe String
+                     , port :: Maybe Int }
+         deriving (Data, Eq, Show, Typeable)
+
+mode :: Mode (CmdArgs Cmd)
+mode =
+  cmdArgsMode $ modes appCmds
+  &= program (txtToLowerStr $ strToTxt name')
+  &= help "Manage Your SmartOS Boxes."
+  &= helpArg [ explicit, name "help", name "h" ]
+  &= summary ( name' ++ " version " ++ version'
+               ++ " (c) 2012 Positive Inertia, LLC." )
+  &= versionArg [ explicit, name "version", name "V", summary version' ]
+  &= verbosity
+  where
+    name'    = "Box"
+    version' = "0.1.0"
+
+appCmds :: [Cmd]
+appCmds =
+  [ Download
+    &= help "Check & Download the latest SmartOS Platform"
+  , VBox
+    &= help "Setup or Update your SmartOS VBox instance"
+  , Bootstrap { host = def
+                       &= help "The host to bootstrap"
+                       &= opt (Just ("127.0.0.1" :: String))
+                       &= typ "HOST"
+              , port = def
+                       &= help "The ssh port to use"
+                       &= opt (Just (22 :: Int))
+                       &= typ "PORT"
+              }
+    &= help "Bootstrap a SmartOS Box as a VM host"
+  ]
+
+-- | Main entry point & processor of command line arguments
 main :: IO ()
 main = do
   arguments  <- getArgs
   options    <- (if null arguments then withArgs ["--help"] else id)
-                $ cmdArgsRun modes'
+                $ cmdArgsRun mode
   verbosity' <- getVerbosity
   shelly
     $ case verbosity' of
@@ -33,51 +72,61 @@ main = do
       Loud   -> verbosely . print_stdout True  . print_commands True
     $ do platform' <- platform
          dispatch options platform'
-  where
-    modes' =
-      cmdArgsMode $ modes modes''
-      &= program (txtToLowerStr $ strToTxt name')
-      &= help "Manage Your SmartOS Boxes."
-      &= helpArg [ explicit, name "help", name "h" ]
-      &= summary ( name' ++ " version " ++ version'
-                   ++ " (c) 2012 Positive Inertia, LLC." )
-      &= versionArg [ explicit, name "version", name "V", summary version' ]
-      &= verbosity
-    modes'' = [ Download &= help "Download the latest SmartOS Platform"
-              , VBox     &= help "Setup a SmartOS VBox instance" ]
-    name'    = "Box"
-    version' = "0.1.0"
-    dispatch Download = checksumDownload
-    dispatch VBox     = setupVBoxVM
+
+-- | Dispatch a Cmd to it's appropriate function
+dispatch :: Cmd -> SmartOS -> ShIO ()
+dispatch Download        = checksumDownload
+dispatch VBox            = setupVBoxVM
+dispatch b@Bootstrap{..} = flip bootstrap b
 
 -----------------------------------------------------------------------------
+-- Possible Exceptions
 
--- TODO need robust dependency-tracking
--- TODO need ssh/scp abilities for bootstrapping
--- TODO still need subcommands
+data Ex = BootstrapEx Text
+        deriving (Data, Eq, Show, Typeable)
+
+instance Exception Ex
+
+-----------------------------------------------------------------------------
+-- VirtualBox Interaction
 
 data Box = Box { sbVm         :: VBoxVM
-                         , sbVmDiskPath :: FilePath
-                         , sbIsoPath    :: FilePath
-                         , sbPlatform   :: SmartOS }
-              deriving (Data, Show, Typeable, Eq)
+               , sbVmDiskPath :: FilePath
+               , sbIsoPath    :: FilePath
+               , sbPlatform   :: SmartOS }
+         deriving (Data, Show, Typeable, Eq)
 
+-- TODO need robust run-once dependency-tracking between tasks
+
+-- | Boot an existing SmartoS VBox instance
+-- bootVBoxVM :: SmartOS -> ShIO ()
+-- bootVBoxVM so@SmartOS{..} = do
+--   -- deps
+--   setupVBoxVM so
+--   -- boot
+--   -- boot virtualbox vm
+--   -- TODO where do we get the VBox instance? needs extracting
+
+-- | Setup a VirtualBox instance with 4GB ram & 40GB disk for SmartOS
 setupVBoxVM :: SmartOS -> ShIO ()
 setupVBoxVM so@SmartOS{..} = do
+  -- deps
   checksumDownload so
+  -- setup
   props <- vbSysProps
   home <- homePath
-  let diskPath    = vmDirPath' </> "zones.vdi"
+  let diskPath    = vmDirPath' </> ("zones.vdi" :: FilePath)
       isoPath'    = isoPath so (isoDirPath home)
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
       vm          = VBoxVM { vmIdent = "smartbox"
                            , vmDirPath = vmDirPath' }
   createOrUpdateVBoxVM Box { sbVm         = vm
-                                , sbVmDiskPath = diskPath
-                                , sbIsoPath    = isoPath'
-                                , sbPlatform   = so }
+                           , sbVmDiskPath = diskPath
+                           , sbIsoPath    = isoPath'
+                           , sbPlatform   = so }
 
+-- | create or update a VirtualBox instance depending on the current state
 createOrUpdateVBoxVM :: Box -> ShIO ()
 createOrUpdateVBoxVM sb@Box{..} =
   do vbManageVM_ sbVm ShowVMInfo []
@@ -85,6 +134,7 @@ createOrUpdateVBoxVM sb@Box{..} =
   `catch_sh`
   (\(_e :: SomeException) -> createVBoxVM sb)
 
+-- | create a new VirtualBox instance
 createVBoxVM :: Box -> ShIO ()
 createVBoxVM sb@Box{..} = do
   status ["Creating a SmartOS VBox instance", vmDirPath']
@@ -118,6 +168,7 @@ createVBoxVM sb@Box{..} = do
         vmDirPath' = fpToTxt . vmDirPath    $ sbVm
         vmDiskPath = fpToTxt                $ sbVmDiskPath
 
+-- | update an existing VirtualBox instance
 updateVBoxVM :: Box -> ShIO ()
 updateVBoxVM Box{..} = do
   status ["Attaching SmartOS ISO", fpToTxt sbIsoPath]
@@ -126,3 +177,20 @@ updateVBoxVM Box{..} = do
                                      , "--port", "1"
                                      , "--storagectl", "IDE Controller"
                                      , "--type", "dvddrive" ]
+
+-----------------------------------------------------------------------------
+-- Bootstrap SmartOS
+
+-- TODO need ssh/scp abilities for bootstrapping
+
+-- | Bootstrap (initial setup) SmartOS Platform box over SSH
+bootstrap :: SmartOS -> Cmd -> ShIO ()
+bootstrap _so@SmartOS{..} _conf@Bootstrap{..} = do
+  -- TODO where do we get the ssh info? needs args/opts
+  -- take all our args
+  -- & ssh into the box
+  -- & setup ssh-conduit
+  -- & login as "root/root"
+  -- & run function to setup dsadm & do an update
+  -- & print the output of run
+  return ()
