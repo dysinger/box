@@ -20,11 +20,10 @@ import qualified Data.Text.Lazy       as T
 import qualified Network.HTTP.Conduit as C
 import           Prelude              hiding (FilePath)
 import           Shelly
-import           System.Directory     (doesFileExist)
+import           System.Directory     (getModificationTime, doesFileExist)
+import           System.Time
 
 default (Text)
-
--- TODO we need to download the md5sum as a separate cached file
 
 isoUrl :: SmartOS -> Text
 isoUrl SmartOS{..} = mirror isoName
@@ -35,20 +34,52 @@ isoPath SmartOS{..} = flip (</>) isoName
 isoDirPath :: FilePath -> FilePath
 isoDirPath = flip (</>) (".smartos" :: FilePath)
 
+mirror :: Text -> Text
+mirror = T.append "https://download.joyent.com/pub/iso/"
+
+-----------------------------------------------------------------------------
+
 platform :: ShIO SmartOS
-platform =
-  status ["Fetching SmartOS Platform release list"] $ do
-    bs <- liftIO . C.simpleHttp . txtToStr . mirror $ "md5sums.txt"
-    let isIso  = filter . T.isInfixOf $ "iso"
-        line   = last . (map T.words) . isIso . bsToTxtLines $ bs
-    return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
+platform = do
+  home <- homePath
+  let filePath = isoDirPath home </> ("md5sums.txt" :: FilePath)
+  isUpToDate <- isMetadataUpToDate filePath
+  if isUpToDate then return () else cacheMetadata filePath
+  contents <- liftIO . readFile . fpToGfp $ filePath
+  let isIso  = filter . T.isInfixOf $ "iso"
+      line   = last . (map T.words) . isIso . T.lines . strToTxt $ contents
+  return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
+
+isMetadataUpToDate :: FilePath -> ShIO Bool
+isMetadataUpToDate filePath =
+  status ["Checking today's SmartOS Platform metadata"] $ do
+    let filePath' = fpToGfp filePath
+    localTime <- liftIO getClockTime
+    exists    <- liftIO . doesFileExist $ filePath'
+    if exists
+      then do fileTime <- liftIO . getModificationTime $ filePath'
+              let diff = diffClockTimes localTime fileTime
+              return $ (tdDay diff) + (tdMonth diff) + (tdYear diff) == 0
+      else return False
+
+cacheMetadata :: FilePath -> ShIO ()
+cacheMetadata filePath =
+  status ["Updating SmartOS Platform metadata"] $ do
+    let url  = mirror "md5sums.txt"
+    request <- C.parseUrl . txtToStr $ url
+    C.withManager $ \manager -> do
+      C.Response _ _ _ bsrc <- C.http request manager
+      bsrc $$ C.sinkFile . fpToGfp $ filePath
+
+-----------------------------------------------------------------------------
 
 download :: SmartOS -> ShIO ()
 download so@SmartOS{..} = do
+  -- TODO don't checksum every run - only when we download
   home <- homePath
-  let path' = (isoDirPath home) </> isoName
-      loop  = download' so >> download so
-  isoExists <- liftIO $ doesFileExist (T.unpack $ toTextIgnore path')
+  let filePath = (isoDirPath home) </> isoName
+      loop     = downloadISO so >> download so
+  isoExists <- liftIO $ doesFileExist . fpToGfp $ filePath
   if isoExists
     then do c <- checksum so
             case c of
@@ -65,8 +96,8 @@ checksum SmartOS{..} = do
     let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
 
-download' :: SmartOS -> ShIO ()
-download' so@SmartOS{..} = do
+downloadISO :: SmartOS -> ShIO ()
+downloadISO so@SmartOS{..} = do
   home <- homePath
   let isoDirPath' = isoDirPath $ home
       isoPath'    = isoDirPath' </> isoName
@@ -77,6 +108,3 @@ download' so@SmartOS{..} = do
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile (fpToGfp isoPath')
-
-mirror :: Text -> Text
-mirror = T.append "https://download.joyent.com/pub/iso/"
