@@ -7,7 +7,7 @@ import System.Console.CmdArgs.Default
 default (Text)
 
 data Cmd = Help
-         | SmartOSDownload
+         | SmartPlatformSync
          | SmartBoxSetup
          | SmartOSBootstrap { smart_os_host :: Maybe String
                             , smart_os_port :: Maybe Int }

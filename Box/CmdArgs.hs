@@ -28,10 +28,9 @@ main = do
            Loud   -> verbosely . print_stdout True  . print_commands True
          $ platform >>= dispatch' command'
   where
-    -- TODO find a way to not have knowledge of every command (module dispatch)
-    dispatch' SmartOSDownload = download
-    dispatch' SmartBoxSetup   = setup
-    dispatch' _               = throw $ Ex "Problem with Main.main dispatch"
+    dispatch' SmartPlatformSync = download
+    dispatch' SmartBoxSetup     = setup
+    dispatch' _                 = throw $ Ex "Problem with Main.main dispatch"
 
 -- | Consolidate all the modes of this application
 mode :: Mode Cmd
