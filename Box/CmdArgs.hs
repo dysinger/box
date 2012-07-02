@@ -8,8 +8,8 @@ import Box.Types
 import Control.Exception
 import Data.Text.Lazy                  (Text)
 import Prelude                         hiding (FilePath)
-import Shelly
-import System.Console.CmdArgs          hiding (help, modes)
+import Shelly                          hiding (command)
+import System.Console.CmdArgs          hiding (help, modes, verbosity)
 import System.Console.CmdArgs.Explicit hiding (mode, modes)
 
 default (Text)
@@ -17,20 +17,21 @@ default (Text)
 -- | Main entry point & processor of command line arguments
 main :: IO ()
 main = do
-  command'   <- processArgs mode
-  verbosity' <- getVerbosity
-  if command' == Help
+  command   <- processArgs mode
+  verbosity <- getVerbosity
+  if command == Help
     then putStrLn . show $ helpText [] HelpFormatDefault mode
     else shelly
-         $ case verbosity' of
+         $ case verbosity of
            Quiet  -> silently  . print_stdout False . print_commands False
            Normal -> sub       . print_stdout False . print_commands False
            Loud   -> verbosely . print_stdout True  . print_commands True
-         $ platform >>= dispatch' command'
+         $ dispatch command
   where
-    dispatch' SmartPlatformSync = download
-    dispatch' SmartBoxSetup     = setup
-    dispatch' _                 = throw $ Ex "Problem with Main.main dispatch"
+    dispatch SmartPlatformSync{..} = sync
+    dispatch SmartBoxSetup{..}     = setup
+    dispatch _                     = throw $
+                                     Ex "Problem with Main.main dispatch"
 
 -- | Consolidate all the modes of this application
 mode :: Mode Cmd

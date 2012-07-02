@@ -1,10 +1,10 @@
 module Box.SmartOS
        ( SmartOS(..)
-       , download
        , isoDirPath
        , isoPath
        , isoUrl
        , platform
+       , sync
        ) where
 
 import           Box.Shell
@@ -73,32 +73,30 @@ cacheMetadata filePath =
 
 -----------------------------------------------------------------------------
 
-download :: SmartOS -> ShIO ()
-download so@SmartOS{..} = do
-  -- TODO don't checksum every run - only when we download
+sync :: ShIO ()
+sync = do
+  so@SmartOS{..} <- platform
   home <- homePath
   let filePath = (isoDirPath home) </> isoName
-      loop     = downloadISO so >> download so
+      loop     = downloadISO so home >> sync
   isoExists <- liftIO $ doesFileExist . fpToGfp $ filePath
   if isoExists
-    then do c <- checksum so
+    then do c <- checksum so home
             case c of
               Right _ -> return ()
               _       -> loop
     else loop
 
-checksum :: SmartOS -> ShIO (Either Text Text)
-checksum SmartOS{..} = do
-  home <- homePath
+checksum :: SmartOS -> FilePath -> ShIO (Either Text Text)
+checksum SmartOS{..} home = do
   let isoPath' = toTextIgnore $ (isoDirPath home) </> isoName
   status ["Checking", isoPath'] $ do
     hash <- C.runResourceT $ C.sourceFile (txtToStr isoPath') $$ C.sinkHash
     let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
 
-downloadISO :: SmartOS -> ShIO ()
-downloadISO so@SmartOS{..} = do
-  home <- homePath
+downloadISO :: SmartOS -> FilePath -> ShIO ()
+downloadISO so@SmartOS{..} home = do
   let isoDirPath' = isoDirPath $ home
       isoPath'    = isoDirPath' </> isoName
       isoUrl'     = isoUrl so

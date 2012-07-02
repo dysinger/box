@@ -14,13 +14,14 @@ import Shelly
 default (Text)
 
 -- | Setup a SmartBox with 4GB ram & 40GB disk for SmartOS
-setup :: SmartOS -> ShIO ()
-setup so@SmartOS{..} = do
+setup :: ShIO ()
+setup = do
   -- deps
-  download so
+  sync
   -- setup
+  so    <- platform
   props <- vbSysProps
-  home <- homePath
+  home  <- homePath
   let diskPath    = vmDirPath' </> ("zones.vdi" :: FilePath)
       isoPath'    = isoPath so (isoDirPath home)
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
