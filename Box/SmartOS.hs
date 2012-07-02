@@ -51,16 +51,15 @@ platform = do
   return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
 
 isMetadataUpToDate :: FilePath -> ShIO Bool
-isMetadataUpToDate filePath =
-  status ["Checking today's SmartOS Platform metadata"] $ do
-    let filePath' = fpToGfp filePath
-    localTime <- liftIO getClockTime
-    exists    <- liftIO . doesFileExist $ filePath'
-    if exists
-      then do fileTime <- liftIO . getModificationTime $ filePath'
-              let diff = diffClockTimes localTime fileTime
-              return $ (tdDay diff) + (tdMonth diff) + (tdYear diff) == 0
-      else return False
+isMetadataUpToDate filePath = do
+  let filePath' = fpToGfp filePath
+  localTime <- liftIO getClockTime
+  exists    <- liftIO . doesFileExist $ filePath'
+  if exists
+    then do fileTime <- liftIO . getModificationTime $ filePath'
+            let diff = diffClockTimes localTime fileTime
+            return $ (tdDay diff) + (tdMonth diff) + (tdYear diff) == 0
+    else return False
 
 cacheMetadata :: FilePath -> ShIO ()
 cacheMetadata filePath =
