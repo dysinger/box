@@ -28,10 +28,10 @@ main = do
            Loud   -> verbosely . print_stdout True  . print_commands True
          $ dispatch command
   where
-    dispatch SmartPlatformSync{..} = sync
-    dispatch SmartBoxSetup{..}     = setup
-    dispatch _                     = throw $
-                                     Ex "Problem with Main.main dispatch"
+    dispatch SmartPlatformDownload{..} = download
+    dispatch SmartBoxSetup{..}         = setup
+    dispatch _                         = throw $
+                                         Ex "Problem with Main.main dispatch"
 
 -- | Consolidate all the modes of this application
 mode :: Mode Cmd

@@ -4,7 +4,7 @@ module Box.SmartOS
        , isoPath
        , isoUrl
        , platform
-       , sync
+       , download
        ) where
 
 import           Box.Shell
@@ -72,12 +72,12 @@ cacheMetadata filePath =
 
 -----------------------------------------------------------------------------
 
-sync :: ShIO ()
-sync = do
+download :: ShIO ()
+download = do
   so@SmartOS{..} <- platform
   home <- homePath
   let filePath = (isoDirPath home) </> isoName
-      loop     = downloadISO so home >> sync
+      loop     = downloadISO so home >> download
   isoExists <- liftIO $ doesFileExist . fpToGfp $ filePath
   if isoExists
     then do c <- checksum so home

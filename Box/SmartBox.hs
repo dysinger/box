@@ -17,7 +17,7 @@ default (Text)
 setup :: ShIO ()
 setup = do
   -- deps
-  sync
+  download
   -- setup
   so    <- platform
   props <- vbSysProps
