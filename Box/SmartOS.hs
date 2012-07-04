@@ -32,7 +32,7 @@ isoPath :: SmartOS -> FilePath -> FilePath
 isoPath SmartOS{..} = flip (</>) isoName
 
 isoDirPath :: FilePath -> FilePath
-isoDirPath = flip (</>) (".smartos" :: FilePath)
+isoDirPath = flip (</>) ((".box" :: FilePath) </> ("smartos" :: FilePath))
 
 mirror :: Text -> Text
 mirror = T.append "https://download.joyent.com/pub/iso/"
