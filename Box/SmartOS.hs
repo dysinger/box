@@ -46,9 +46,9 @@ platform = do
   isUpToDate <- isMetadataUpToDate filePath
   if isUpToDate then return () else cacheMetadata filePath
   contents <- liftIO . readFile . fpToGfp $ filePath
-  let isIso  = filter . T.isInfixOf $ "iso"
-      line   = last . (map T.words) . isIso . T.lines . strToTxt $ contents
-  return SmartOS { isoMd5 = (line !! 0), isoName = (line !! 1) }
+  let isIso = filter . T.isInfixOf $ "iso"
+      line  = last . (map T.words) . isIso . T.lines . strToTxt $ contents
+  return SmartOS { isoMd5 = line !! 0, isoName = line !! 1 }
 
 isMetadataUpToDate :: FilePath -> ShIO Bool
 isMetadataUpToDate filePath = do
@@ -64,7 +64,7 @@ isMetadataUpToDate filePath = do
 cacheMetadata :: FilePath -> ShIO ()
 cacheMetadata filePath =
   status ["Updating SmartOS Platform metadata"] $ do
-    let url  = mirror "md5sums.txt"
+    let url = mirror "md5sums.txt"
     request <- C.parseUrl . txtToStr $ url
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
