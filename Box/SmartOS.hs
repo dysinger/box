@@ -64,8 +64,8 @@ isMetadataUpToDate filePath = do
 cacheMetadata :: FilePath -> ShIO ()
 cacheMetadata filePath =
   status ["Updating SmartOS Platform metadata"] $ do
-    let url = mirror "md5sums.txt"
-    request <- C.parseUrl . txtToStr $ url
+    createDir
+    request <- C.parseUrl . txtToStr . mirror $ "md5sums.txt"
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile . fpToGfp $ filePath
@@ -78,7 +78,7 @@ download = do
   home <- homePath
   let filePath = (isoDirPath home) </> isoName
       loop     = downloadISO so home >> download
-  isoExists <- liftIO $ doesFileExist . fpToGfp $ filePath
+  isoExists <- liftIO . doesFileExist . fpToGfp $ filePath
   if isoExists
     then do c <- checksum so home
             case c of
@@ -96,12 +96,17 @@ checksum SmartOS{..} home = do
 
 downloadISO :: SmartOS -> FilePath -> ShIO ()
 downloadISO so@SmartOS{..} home = do
-  let isoDirPath' = isoDirPath $ home
+  let isoDirPath' = isoDirPath home
       isoPath'    = isoDirPath' </> isoName
       isoUrl'     = isoUrl so
   status ["Downloading", fpToTxt isoPath'] $ do
-    mkdir_p isoDirPath'
-    request <- C.parseUrl (T.unpack isoUrl')
+    createDir
+    request <- C.parseUrl . txtToStr $ isoUrl'
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile (fpToGfp isoPath')
+
+-----------------------------------------------------------------------------
+
+createDir :: ShIO ()
+createDir = homePath >>= mkdir_p . isoDirPath
