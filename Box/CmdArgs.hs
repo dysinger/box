@@ -1,49 +1,45 @@
-module Box.CmdArgs (main) where
+module Box.CmdArgs where
 
-import Box.CmdArgs.SmartBox
-import Box.CmdArgs.SmartOS
-import Box.SmartBox
-import Box.SmartOS
-import Box.Types
-import Control.Exception
-import Data.Text.Lazy                  (Text)
-import Prelude                         hiding (FilePath)
-import Shelly                          hiding (command)
-import System.Console.CmdArgs          hiding (help, modes, verbosity)
-import System.Console.CmdArgs.Explicit hiding (mode, modes)
+import qualified Box.CmdArgs.SmartOS             as SmartOS
+import qualified Box.CmdArgs.SmartBox            as SmartBox
+import           Box.Shelly
+import           Box.Types
+import           Box.Text
 
+-- cmdargs imports
+import           System.Console.CmdArgs.Default
+import           System.Console.CmdArgs.Explicit hiding (mode)
+
+-- shelly imports
+import           Prelude                         hiding (FilePath)
+import           Shelly                          hiding (shelly, command, cmd)
+
+-- default to Text strings
+import           Data.Text.Lazy                  (Text)
 default (Text)
 
--- | Main entry point & processor of command line arguments
 main :: IO ()
-main = do
-  command   <- processArgs mode
-  verbosity <- getVerbosity
-  if command == Help
-    then putStrLn . show $ helpText [] HelpFormatDefault mode
-    else shelly
-         $ case verbosity of
-           Quiet  -> silently  . print_stdout False . print_commands False
-           Normal -> sub       . print_stdout False . print_commands False
-           Loud   -> verbosely . print_stdout True  . print_commands True
-         $ dispatch command
-  where
-    dispatch SmartOSDownload{..} = download
-    dispatch SmartBoxSetup{..}   = setup
-    dispatch _                   = throw $
-                                   Ex "Problem with Main.main dispatch"
+main = processArgs mode >>= shelly . dispatch
 
--- | Consolidate all the modes of this application
+-- TODO defer to sub-modules for dispatching specific commands
+dispatch :: Cmd -> ShIO ()
+dispatch Help{..}                 = echo . toTxt $ helpText [] def mode
+dispatch cmd@SmartOSDownload{..}  = SmartOS.dispatch  cmd
+dispatch cmd@SmartOSHelp{..}      = SmartOS.dispatch  cmd
+dispatch cmd@SmartOSBootstrap{..} = SmartOS.dispatch  cmd
+dispatch cmd@SmartBoxHelp{..}     = SmartBox.dispatch cmd
+dispatch cmd@SmartBoxSetup{..}    = SmartBox.dispatch cmd
+
 mode :: Mode Cmd
 mode =
   Mode { modeArgs       = ([], Nothing)
        , modeCheck      = (\x -> Right x)
        , modeGroupFlags = toGroup [ flagHelpSimple (\c -> c)
                                   , flagVersion (\c -> c) ]
-       , modeGroupModes = toGroup [ smartOSMode, smartBoxMode ]
+       , modeGroupModes = toGroup [ SmartOS.mode, SmartBox.mode ]
        , modeHelp       = "Box Management"
        , modeHelpSuffix = [ "TODO: Provide a paragraph or two on "
                           , "how this app is supposed to be used." ]
        , modeNames      = ["box"]
        , modeReform     = (\x -> Just [show x])
-       , modeValue      = Help }
+       , modeValue      = def }

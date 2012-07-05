@@ -1,30 +1,35 @@
 module Box.CmdArgs.SmartBox where
 
-import Box.Types.CmdArgs
-import Data.Text.Lazy                  (Text)
-import System.Console.CmdArgs.Explicit
+import Box.SmartBox
+import Box.Text
+import Box.Types
 
+-- cmdargs imports
+import System.Console.CmdArgs.Default
+import System.Console.CmdArgs.Explicit hiding (mode)
+
+-- shelly imports
+import Prelude                         hiding (FilePath)
+import Shelly                          hiding (shelly)
+
+-- default to Text strings
+import Data.Text.Lazy                  (Text)
 default (Text)
 
-smartBoxMode :: Mode Cmd
-smartBoxMode =
-  Mode { modeArgs       = ([], Nothing)
-       , modeCheck      = (\x -> Right x)
-       , modeGroupFlags = toGroup []
-       , modeGroupModes = toGroup [ setupMode ]
-       , modeHelp       = "SmartOS / VirtualBox Management"
-       , modeHelpSuffix = []
-       , modeNames      = ["smartbox"]
-       , modeReform     = (\x -> Just [show x])
-       , modeValue      = SmartBoxSetup }
+dispatch :: Cmd -> ShIO ()
+dispatch SmartBoxHelp{..}  = echo . toTxt $ helpText [] def mode
+dispatch SmartBoxSetup{..} = setup
+dispatch _                 = echo "WTFBBQ?!"
+
+mode :: Mode Cmd
+mode =
+  def { modeGroupFlags = toGroup [ flagHelpSimple (\c -> c) ]
+      , modeGroupModes = toGroup [ setupMode ]
+      , modeHelp       = "SmartOS/VirtualBox Management"
+      , modeNames      = ["smartbox"]
+      , modeValue      = SmartBoxHelp }
   where
     setupMode =
-      Mode { modeArgs       = ([], Nothing)
-           , modeCheck      = (\x -> Right x)
-           , modeGroupFlags = toGroup []
-           , modeGroupModes = toGroup []
-           , modeHelp       = "SmartOS / VirtualBox Instance Setup"
-           , modeHelpSuffix = []
-           , modeNames      = ["setup"]
-           , modeReform     = (\x -> Just [show x])
-           , modeValue      = SmartBoxSetup }
+      def { modeHelp  = "SmartOS/VirtualBox Setup"
+          , modeNames = ["setup"]
+          , modeValue = SmartBoxHelp }

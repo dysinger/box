@@ -1,28 +1,33 @@
 module Box.SmartOS
        ( SmartOS(..)
+       , bootstrap
+       , download
        , isoDirPath
        , isoPath
        , isoUrl
        , platform
-       , download
        ) where
 
-import           Box.Shell
+import           Box.Shelly
 import           Box.Text
 import           Box.Types
+
 import qualified Crypto.Conduit       as C
 import           Data.Conduit         (($$))
 import qualified Data.Conduit         as C
 import qualified Data.Conduit.Binary  as C
 import           Data.Digest.Pure.MD5 (MD5Digest)
-import           Data.Text.Lazy       (Text)
 import qualified Data.Text.Lazy       as T
 import qualified Network.HTTP.Conduit as C
-import           Prelude              hiding (FilePath)
-import           Shelly
 import           System.Directory     (getModificationTime, doesFileExist)
 import           System.Time
 
+-- shelly imports
+import           Prelude              hiding (FilePath)
+import           Shelly               hiding (shelly)
+
+-- default to Text strings
+import           Data.Text.Lazy       (Text)
 default (Text)
 
 isoUrl :: SmartOS -> Text
@@ -37,7 +42,8 @@ isoDirPath = flip (</>) ((".box" :: FilePath) </> ("smartos" :: FilePath))
 mirror :: Text -> Text
 mirror = T.append "https://download.joyent.com/pub/iso/"
 
------------------------------------------------------------------------------
+createDir :: ShIO ()
+createDir = homePath >>= mkdir_p . isoDirPath
 
 platform :: ShIO SmartOS
 platform = do
@@ -69,8 +75,6 @@ cacheMetadata filePath =
     C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile . fpToGfp $ filePath
-
------------------------------------------------------------------------------
 
 download :: ShIO ()
 download = do
@@ -106,7 +110,6 @@ downloadISO so@SmartOS{..} home = do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile (fpToGfp isoPath')
 
------------------------------------------------------------------------------
-
-createDir :: ShIO ()
-createDir = homePath >>= mkdir_p . isoDirPath
+bootstrap :: ShIO ()
+bootstrap = do
+  return ()

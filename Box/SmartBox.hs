@@ -1,16 +1,20 @@
 module Box.SmartBox (setup) where
 
-import Box.Shell
+import Box.Shelly
 import Box.SmartOS
 import Box.Text
 import Box.Types
 import Box.VBox
+
 import Control.Exception
 import Data.Map          hiding (null, update)
-import Data.Text.Lazy    (Text)
-import Prelude           hiding (FilePath)
-import Shelly
 
+-- shelly imports
+import Prelude           hiding (FilePath)
+import Shelly            hiding (shelly)
+
+-- default to Text strings
+import Data.Text.Lazy    (Text)
 default (Text)
 
 -- | Setup a SmartBox with 4GB ram & 40GB disk for SmartOS
@@ -26,7 +30,7 @@ setup = do
       isoPath'    = isoPath so (isoDirPath home)
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
-      vm          = VBoxVM { vmIdent = "smartbox"
+      vm          = VBoxVM { vmIdent   = "smartbox"
                            , vmDirPath = vmDirPath' }
   createOrUpdate SmartBox { sbVm         = vm
                           , sbVmDiskPath = diskPath

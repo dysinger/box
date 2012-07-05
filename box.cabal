@@ -22,6 +22,7 @@ executable              box
                         DeriveDataTypeable
                         ExistentialQuantification
                         ExtendedDefaultRules
+                        FlexibleInstances
                         OverloadedStrings
                         RankNTypes
                         RecordWildCards
