@@ -32,4 +32,4 @@ mode =
     setupMode =
       def { modeHelp  = "SmartOS/VirtualBox Setup"
           , modeNames = ["setup"]
-          , modeValue = SmartBoxHelp }
+          , modeValue = SmartBoxSetup }

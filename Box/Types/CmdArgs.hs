@@ -14,10 +14,10 @@ data Cmd = Help
            -- smartos
          | SmartOSHelp
          | SmartOSDownload
-         | SmartOSBootstrap { host :: String
+         | SmartOSBootstrap { host :: Text
                             , port :: Int
-                            , user :: String
-                            , pass :: String }
+                            , user :: Text
+                            , pass :: Text }
            -- smartbox
          | SmartBoxHelp
          | SmartBoxSetup

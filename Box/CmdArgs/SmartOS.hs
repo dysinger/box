@@ -33,24 +33,24 @@ mode =
     downloadMode =
       def { modeHelp  = "SmartOS Platform Download"
           , modeNames = ["download"]
-          , modeValue = SmartOSHelp }
+          , modeValue = SmartOSDownload }
     bootstrapMode =
       def { modeGroupFlags =
-               toGroup [ flagOpt "127.0.0.1" ["host","h"] upd "HOST"
-                         "Host or IP for SSH"
-                       , flagOpt "22"        ["port","p"] upd "PORT"
-                         "TCP Port for SSH"
-                       , flagOpt "root"      ["user","U"] upd "USER"
-                         "User for SSH"
-                       , flagOpt "root"      ["pass","P"] upd "PASS"
-                         "Password for SSH"
+               toGroup [ flagReq ["host", "h"] (upd "host") "HOST" "Host or IP for SSH"
+                       , flagReq ["port", "p"] (upd "port") "PORT" "TCP Port for SSH"
+                       , flagReq ["user", "U"] (upd "user") "USER" "User for SSH"
+                       , flagReq ["pass", "P"] (upd "pass") "PASS" "Password for SSH"
                        ]
           , modeHelp       = "SmartOS Platform Bootstrap"
           , modeNames      = ["bootstrap"]
-          , modeValue      = SmartOSHelp }
-    upd _str val =
-      -- TODO validate hostname | IPv4 | IPv6 addr
-      -- TODO validate port
-      -- TODO validate user
-      -- TODO validate password
-      Right val
+          , modeValue      = SmartOSBootstrap { host = "127.0.0.1"
+                                              , port = 22
+                                              , user = "root"
+                                              , pass = "root" }
+          }
+    upd :: Text -> String -> Cmd -> Either String Cmd
+    upd "host" str val   = Right $ val { host = strToTxt str }
+    upd "port" str val   = Right $ val { port = read str }
+    upd "user" str val   = Right $ val { user = strToTxt str }
+    upd "pass" str val   = Right $ val { pass = strToTxt str }
+    upd _      _   _     = Left "WTFBBQ?!"
