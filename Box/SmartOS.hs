@@ -108,7 +108,7 @@ downloadISO so@SmartOS{..} home = do
     request <- liftIO $ C.parseUrl . txtToStr $ isoUrl'
     liftIO $ C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
-      bsrc $$ C.sinkFile (fpToGfp isoPath')
+      bsrc C.$$+- C.sinkFile (fpToGfp isoPath')
 
 bootstrap :: ShIO ()
 bootstrap = do
