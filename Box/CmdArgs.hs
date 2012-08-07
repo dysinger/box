@@ -32,14 +32,10 @@ dispatch cmd@SmartBoxSetup{..}    = SmartBox.dispatch cmd
 
 mode :: Mode Cmd
 mode =
-  Mode { modeArgs       = ([], Nothing)
-       , modeCheck      = (\x -> Right x)
-       , modeGroupFlags = toGroup [ flagHelpSimple (\c -> c)
-                                  , flagVersion (\c -> c) ]
-       , modeGroupModes = toGroup [ SmartOS.mode, SmartBox.mode ]
-       , modeHelp       = "Box Management"
-       , modeHelpSuffix = [ "TODO: Provide a paragraph or two on "
-                          , "how this app is supposed to be used." ]
-       , modeNames      = ["box"]
-       , modeReform     = (\x -> Just [show x])
-       , modeValue      = def }
+  def { modeGroupFlags = toGroup [ flagHelpSimple (\c -> c)
+                                 , flagVersion (\c -> c) ]
+      , modeGroupModes = toGroup [ SmartOS.mode, SmartBox.mode ]
+      , modeHelp       = "Box Management"
+      , modeHelpSuffix = [ "TODO: Provide a paragraph or two on "
+                         , "how this app is supposed to be used." ]
+      , modeNames      = ["box"] }
