@@ -28,6 +28,7 @@ instance Default Cmd where
 
 instance Default (Mode Cmd) where
   def = Mode { modeArgs       = ([], Nothing)
+             , modeExpandAt   = True
              , modeCheck      = (\x -> Right x)
              , modeGroupFlags = toGroup []
              , modeGroupModes = toGroup []
