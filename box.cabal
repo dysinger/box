@@ -53,4 +53,4 @@ executable              box
                       , conduit
                       , crypto-conduit
                       , http-conduit
-                      , libssh2-conduit
+                   -- , libssh2-conduit
