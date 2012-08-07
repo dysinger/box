@@ -1,6 +1,7 @@
-/cabal-dev
-/dist
-/*.iso
-/*.html
-/*.pdf
-/*.tex
+*.html
+*.iso
+*.pdf
+*.tex
+.shelly
+cabal-dev
+dist
