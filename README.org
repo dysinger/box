@@ -15,4 +15,13 @@
 
 ***** Haskell Platform
 
-***** Cabal Install
+***** Mac
+
+      #+BEGIN_SRC sh
+        brew install icu4c
+        cabal install \
+            --extra-include-dirs=/usr/local/Cellar/icu4c/49.1.2/include \
+            --extra-lib-dirs=/usr/local/Cellar/icu4c/49.1.2/lib
+      #+END_SRC
+
+* PXE Booting SmartOS
