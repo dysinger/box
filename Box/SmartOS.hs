@@ -71,10 +71,10 @@ cacheMetadata :: FilePath -> ShIO ()
 cacheMetadata filePath =
   status ["Updating SmartOS Platform metadata"] $ do
     createDir
-    request <- C.parseUrl . txtToStr . mirror $ "md5sums.txt"
-    C.withManager $ \manager -> do
+    request <- liftIO $ C.parseUrl . txtToStr . mirror $ "md5sums.txt"
+    liftIO $ C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
-      bsrc $$ C.sinkFile . fpToGfp $ filePath
+      bsrc C.$$+- C.sinkFile . fpToGfp $ filePath
 
 download :: ShIO ()
 download = do
@@ -94,7 +94,7 @@ checksum :: SmartOS -> FilePath -> ShIO (Either Text Text)
 checksum SmartOS{..} home = do
   let isoPath' = toTextIgnore $ (isoDirPath home) </> isoName
   status ["Checking", isoPath'] $ do
-    hash <- C.runResourceT $ C.sourceFile (txtToStr isoPath') $$ C.sinkHash
+    hash <- liftIO $ C.runResourceT $ C.sourceFile (txtToStr isoPath') $$ C.sinkHash
     let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
 
@@ -105,8 +105,8 @@ downloadISO so@SmartOS{..} home = do
       isoUrl'     = isoUrl so
   status ["Downloading", fpToTxt isoPath'] $ do
     createDir
-    request <- C.parseUrl . txtToStr $ isoUrl'
-    C.withManager $ \manager -> do
+    request <- liftIO $ C.parseUrl . txtToStr $ isoUrl'
+    liftIO $ C.withManager $ \manager -> do
       C.Response _ _ _ bsrc <- C.http request manager
       bsrc $$ C.sinkFile (fpToGfp isoPath')
 
