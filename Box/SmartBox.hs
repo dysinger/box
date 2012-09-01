@@ -32,16 +32,15 @@ setup = do
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
       vm          = VBoxVM { vmIdent   = "smartbox"
                            , vmDirPath = vmDirPath' }
-  createOrUpdate SmartBox { sbVm         = vm
-                          , sbVmDiskPath = diskPath
-                          , sbIsoPath    = isoPath'
-                          , sbPlatform   = so }
+  maybeCreate SmartBox { sbVm         = vm
+                       , sbVmDiskPath = diskPath
+                       , sbIsoPath    = isoPath'
+                       , sbPlatform   = so }
 
 -- | create or update a SmartBox depending on the current state
-createOrUpdate :: SmartBox -> ShIO ()
-createOrUpdate sb@SmartBox{..} =
-  do vbManageVM_ sbVm ShowVMInfo []
-     update sb
+maybeCreate :: SmartBox -> ShIO ()
+maybeCreate sb@SmartBox{..} =
+  vbManageVM_ sbVm ShowVMInfo []
   `catch_sh`
   (\(_e :: SomeException) -> create sb)
 
