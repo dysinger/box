@@ -39,51 +39,46 @@ setup = do
 
 -- | create or update a SmartBox depending on the current state
 maybeCreate :: SmartBox -> ShIO ()
-maybeCreate sb@SmartBox{..} =
+maybeCreate sb@SmartBox{..} = do
   vbManageVM_ sbVm ShowVMInfo []
+  update sb
   `catch_sh`
-  (\(_e :: SomeException) -> create sb)
+  (\(_e :: SomeException) -> do
+      create sb
+      update sb)
 
 -- | create a new SmartBox
 create :: SmartBox -> ShIO ()
-create sb@SmartBox{..} = do
-  status ["Creating a SmartBox", vmDirPath']
-    $ vbManage_ CreateVM [ "--name", vmIdent sbVm
-                         , "--ostype", "OpenSolaris_64"
-                         , "--register" ]
-  status ["Setting CPUs to 2 and Memory to 4096MB"]
-    $ vm ModifyVM [ "--cpus", "2", "--memory", "4096" ]
-  status ["Adding an IDE controller to SmartOS"]
-    $ vm StorageCtl [ "--add" , "ide", "--name", "IDE Controller" ]
-  status ["Creating 40GB disk", vmDiskPath]
-    $ vbManage_ CreateHD [ "--filename", vmDiskPath, "--size", "40960" ]
-  status ["Attaching 40GB disk", vmDiskPath]
-    $ vm StorageAttach [ "--device", "0"
-                       , "--medium", vmDiskPath
-                       , "--port", "0"
-                       , "--storagectl" , "IDE Controller"
-                       , "--type", "hdd" ]
-  status ["Setting disk boot order"]
-    $ vm ModifyVM [ "--boot1", "dvd", "--boot2", "disk", "--boot3", "none" ]
-  status ["Setting 1st net adapter to NAT @ ssh on port 2222 @ localhost"]
-    $ vm ModifyVM [ "--natpf1", "SSH,tcp,,2222,,22" ]
-  status ["Setting 2nd net adapter to bridged on host interface wlan0"]
-    $ vm ModifyVM [ "--nic2", "bridged", "--bridgeadapter2", strToTxt "wlan0" ]
-  status ["Setting 3nd net adapter to bridged on host interface wlan0"]
-    $ vm ModifyVM [ "--nic3", "bridged", "--bridgeadapter3", strToTxt "wlan0" ]
-  status ["Setting 4th net adapter to bridged on host interface wlan0"]
-    $ vm ModifyVM [ "--nic4", "bridged", "--bridgeadapter4", strToTxt "wlan0" ]
-  update sb
-  where vm         = vbManageVM_            $ sbVm
-        vmDirPath' = fpToTxt . vmDirPath    $ sbVm
-        vmDiskPath = fpToTxt                $ sbVmDiskPath
+create SmartBox{..} = do
+  status ["Creating VM"] $ do
+    vbManage_ CreateVM [ "--name", vmIdent sbVm
+                       , "--ostype", "OpenSolaris_64"
+                       , "--register" ]
+    vbManageVM_ sbVm ModifyVM [ "--cpus", "2"
+                              , "--memory", "4096" ]
+  status ["Setting up network"] $ do
+    vbManageVM_ sbVm ModifyVM [ "--natpf1", "SSH,tcp,,2222,,22" ]
+  status ["Setting up disk controller"] $ do
+    vbManageVM_ sbVm StorageCtl [ "--add" , "sata"
+                                , "--name", "SATA Controller" ]
+  status ["Making a 40GB 'zones' disk"] $ do
+    vbManage_ CreateHD [ "--filename", fpToTxt $ sbVmDiskPath
+                       , "--size", "40960" ]
+    vbManageVM_ sbVm StorageAttach [ "--device", "0"
+                                   , "--medium", fpToTxt $ sbVmDiskPath
+                                   , "--port", "0"
+                                   , "--storagectl" , "SATA Controller"
+                                   , "--type", "hdd" ]
 
--- | update an existing SmartBox
 update :: SmartBox -> ShIO ()
 update SmartBox{..} = do
-  status ["Attaching SmartOS ISO", fpToTxt sbIsoPath]
-    $ vbManageVM_ sbVm StorageAttach [ "--device", "0"
-                                     , "--medium", toTextIgnore sbIsoPath
-                                     , "--port", "1"
-                                     , "--storagectl", "IDE Controller"
-                                     , "--type", "dvddrive" ]
+  status ["Attaching ISO as DVD"] $ do
+    vbManageVM_ sbVm StorageAttach [ "--device", "0"
+                                   , "--medium", toTextIgnore sbIsoPath
+                                   , "--port", "1"
+                                   , "--storagectl", "SATA Controller"
+                                   , "--type", "dvddrive" ]
+  status ["Setting boot from DVD"] $ do
+    vbManageVM_ sbVm ModifyVM [ "--boot1", "dvd"
+                              , "--boot2", "none"
+                              , "--boot3", "none" ]
