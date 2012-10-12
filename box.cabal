@@ -1,5 +1,5 @@
 name:                   box
-version:                0.1.0.0
+version:                0.1
 synopsis:               Box Management
 homepage:               http://dysinger.net
 license:                OtherLicense
@@ -7,28 +7,25 @@ author:                 Tim Dysinger
 maintainer:             tim@dysinger.net
 category:               System
 build-type:             Simple
-cabal-version:          >= 1.14.0
+cabal-version:          >=1.16
 
 executable              box
-  main-is:              Main.hs
   default-language:     Haskell2010
-  ghc-options:          -O2
-                        -Wall
-                        -fno-warn-type-defaults
-                        -rtsopts
-                        -threaded
-                        -static
   default-extensions:   BangPatterns
                         DeriveDataTypeable
-                        ExistentialQuantification
                         ExtendedDefaultRules
-                        FlexibleInstances
                         OverloadedStrings
                         RankNTypes
                         RecordWildCards
-                        ScopedTypeVariables
                         TemplateHaskell
-  build-depends:        base == 4.5.1.0
+  ghc-options:          -Wall
+                        -fllvm
+                        -rtsopts
+                        -static
+                        -threaded
+  hs-source-dirs:       src
+  main-is:              Main.hs
+  build-depends:        base >=4.6
                       , aeson
                       , cereal
                       , cmdargs
