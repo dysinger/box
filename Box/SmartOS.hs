@@ -69,7 +69,7 @@ isMetadataUpToDate filePath = do
 
 cacheMetadata :: FilePath -> ShIO ()
 cacheMetadata filePath =
-  status ["Updating SmartOS Platform metadata"] $ do
+  status ["Updating metadata"] $ do
     createDir
     request <- liftIO $ C.parseUrl . txtToStr . mirror $ "md5sums.txt"
     liftIO $ C.withManager $ \manager -> do
@@ -93,7 +93,7 @@ download = do
 checksum :: SmartOS -> FilePath -> ShIO (Either Text Text)
 checksum SmartOS{..} home = do
   let isoPath' = toTextIgnore $ (isoDirPath home) </> isoName
-  status ["Checking", isoPath'] $ do
+  status ["Comparing MD5 on ISO"] $ do
     hash <- liftIO $ C.runResourceT $ C.sourceFile (txtToStr isoPath') $$ C.sinkHash
     let md5' = toHexTxt (hash :: MD5Digest)
     return $ if isoMd5 /= md5' then Left md5' else Right isoMd5
@@ -103,7 +103,7 @@ downloadISO so@SmartOS{..} home = do
   let isoDirPath' = isoDirPath home
       isoPath'    = isoDirPath' </> isoName
       isoUrl'     = isoUrl so
-  status ["Downloading", fpToTxt isoPath'] $ do
+  status ["Downloading latest ISO"] $ do
     createDir
     request <- liftIO $ C.parseUrl . txtToStr $ isoUrl'
     liftIO $ C.withManager $ \manager -> do
