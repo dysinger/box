@@ -30,7 +30,7 @@ setup = do
       isoPath'    = isoPath so (isoDirPath home)
       vmBasePath  = findWithDefault "vm" "Default machine folder" props
       vmDirPath'  = vmBasePath </> (txtToStr . vmIdent $ vm)
-      vm          = VBoxVM { vmIdent   = "smartbox"
+      vm          = VBoxVM { vmIdent   = "SmartOS"
                            , vmDirPath = vmDirPath' }
   maybeCreate SmartBox { sbVm         = vm
                        , sbVmDiskPath = diskPath
