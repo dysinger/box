@@ -14,6 +14,7 @@ executable              box
   default-extensions:   BangPatterns
                         DeriveDataTypeable
                         ExtendedDefaultRules
+                        FlexibleInstances
                         OverloadedStrings
                         RankNTypes
                         RecordWildCards
