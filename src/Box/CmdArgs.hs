@@ -32,8 +32,8 @@ dispatch cmd@SmartBoxSetup{..}    = SmartBox.dispatch cmd
 
 mode :: Mode Cmd
 mode =
-  def { modeGroupFlags = toGroup [ flagHelpSimple (\c -> c)
-                                 , flagVersion (\c -> c) ]
+  def { modeGroupFlags = toGroup [ flagHelpSimple id
+                                 , flagVersion id ]
       , modeGroupModes = toGroup [ SmartOS.mode, SmartBox.mode ]
       , modeHelp       = "Box Management"
       , modeHelpSuffix = [ "TODO: Provide a paragraph or two on "

@@ -23,7 +23,7 @@ dispatch _                 = echo "WTFBBQ?!"
 
 mode :: Mode Cmd
 mode =
-  def { modeGroupFlags = toGroup [ flagHelpSimple (\c -> c) ]
+  def { modeGroupFlags = toGroup [ flagHelpSimple id ]
       , modeGroupModes = toGroup [ setupMode ]
       , modeHelp       = "SmartOS/VirtualBox Management"
       , modeNames      = ["smartbox"]

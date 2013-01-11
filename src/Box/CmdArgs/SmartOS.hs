@@ -24,7 +24,7 @@ dispatch _                    = echo "WTFBBQ?!"
 
 mode :: Mode Cmd
 mode =
-  def { modeGroupFlags = toGroup [ flagHelpSimple (\c -> c) ]
+  def { modeGroupFlags = toGroup [ flagHelpSimple id ]
       , modeGroupModes = toGroup [ downloadMode, bootstrapMode ]
       , modeHelp       = "SmartOS Management"
       , modeNames      = ["smartos"]
